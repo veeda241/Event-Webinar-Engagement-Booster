@@ -11,25 +11,33 @@ def generate_personalized_content(user: User, event: Event, message_type: str) -
     
     message_type can be: 'welcome', 'reminder_24h', 'reminder_1h', 'follow_up'
     """
-    # This is a simplified prompt. A real-world scenario would be more detailed.
-    # The prompt is structured for an instruction-tuned model.
-    prompt = f"""[INST] You are a friendly event assistant. Your task is to generate the content for a '{message_type}' email.
+    # The prompt is structured for an instruction-tuned model and includes a one-shot example for better formatting.
+    prompt = f"""[INST] You are a friendly and professional event assistant. Your task is to generate the content for a '{message_type}' email based on the provided details.
 
-User Details:
+### Example Output Format
+Subject: Your Subject Here
+
+Hi [User Name],
+
+This is the body of the email.
+
+Best,
+The Event Team
+
+### User Details
 - Name: {user.name}
 - Interests: {user.interests}
 
-Event Details:
+### Event Details
 - Name: {event.name}
 - Description: {event.description}
 - Time: {event.event_time}
 
-Instructions:
+### Instructions
 - For a 'welcome' message, be warm, confirm their registration, and mention how the event relates to their interests.
 - For a 'reminder_24h' or 'reminder_1h' message, build excitement and provide a placeholder for the event link like [EVENT_LINK].
 - For a 'follow_up' message, thank them for attending and provide the recording link: {event.recording_url}.
-- The output must start with a subject line formatted as 'Subject: Your Subject Here'.
-- The tone must be friendly and professional.
+- The output must strictly follow the example format, starting with 'Subject:'.
 [/INST]
 """
 
