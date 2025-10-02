@@ -1,8 +1,8 @@
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
+from fastapi.middleware.cors import CORSMiddleware
 
-from . import models, schemas
-from . import services, database, scheduler
+from . import models, schemas, services, database, scheduler
 
 # Create database tables
 models.Base.metadata.create_all(bind=database.engine)
@@ -11,6 +11,15 @@ app = FastAPI(
     title="Event & Webinar Engagement Booster",
     description="An AI-powered agent to boost event engagement.",
     version="1.0.0"
+)
+
+# Add CORS middleware to allow the front-end to communicate with the backend.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
 )
 
 @app.get("/")
