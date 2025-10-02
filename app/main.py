@@ -2,7 +2,9 @@ from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from fastapi.middleware.cors import CORSMiddleware
 
-from . import models, schemas, services, database, scheduler
+from . import models, schemas, services, database
+# Import the scheduler object directly from the scheduler module
+from .scheduler import scheduler
 
 # Create database tables
 models.Base.metadata.create_all(bind=database.engine)
@@ -28,12 +30,12 @@ def read_root():
 
 @app.on_event("startup")
 def startup_event():
-    scheduler.scheduler.start()
+    scheduler.start()
     print("🚀 Scheduler started.")
 
 @app.on_event("shutdown")
 def shutdown_event():
-    scheduler.scheduler.shutdown()
+    scheduler.shutdown()
     print("Scheduler shut down.")
 
 @app.post("/events/", response_model=schemas.EventBase)
