@@ -2,10 +2,13 @@ fastapi
 uvicorn[standard]
 sqlalchemy
 pydantic
+PyMySQL
 apscheduler
+beautifulsoup4
+lxml
 python-dotenv
 requests
 transformers
 torch
 # For email, e.g., smtplib is built-in, or use a library like:
-# sendgrid
+sendgrid

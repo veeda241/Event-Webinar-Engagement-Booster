@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from . import models, schemas, services, database, security
-# Import the scheduler object directly from the scheduler module
+from . import importer
 from .scheduler import scheduler
 from . import llm_integration
 
@@ -96,6 +96,30 @@ def create_event(
     db.commit()
     db.refresh(db_event)
     return db_event
+
+@app.post("/import-event/", response_model=schemas.Event)
+async def import_event_from_url(
+    request: Request,
+    import_request: schemas.ImportRequest,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(security.get_current_admin_user)
+):
+    """
+    Imports an event by scraping a URL and using an LLM to extract details.
+    (Admin only)
+    """
+    llm_pipeline = request.app.state.llm_pipeline
+    if llm_pipeline is None:
+        raise HTTPException(status_code=400, detail="LLM is not enabled. Cannot import from URL.")
+    try:
+        event_data = await importer.import_event_from_url(import_request.url, llm_pipeline)
+        db_event = models.Event(**event_data.model_dump())
+        db.add(db_event)
+        db.commit()
+        db.refresh(db_event)
+        return db_event
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to import from URL: {str(e)}")
 
 @app.get("/events/", response_model=List[schemas.Event])
 def read_events(db: Session = Depends(database.get_db)):

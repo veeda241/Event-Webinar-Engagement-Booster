@@ -1,0 +1,22 @@
+[project-root]
+├── .coveragerc
+[run]
+branch = True
+source = 
+    .
+omit = 
+    */tests/*
+    */venv/*
+    
+[report]
+show_missing = True
+skip_covered = True
+
+└── pytest.ini
+[pytest]
+testpaths = 
+    tests
+addopts = 
+    --cov
+    --cov-report=term-missing
+    --cov-report=html

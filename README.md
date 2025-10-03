@@ -9,6 +9,7 @@ The core of the agent is a local LLM (powered by Hugging Face `transformers`) th
 - **User & Event Management**: Simple endpoints to create users and events.
 - **Automated Registration Workflow**: Register users for events with a single API call.
 - **Interest Analysis**: Automatically extracts keywords from event details to build and refine user interest profiles.
+- **AI-Powered Event Importer**: Scrapes a URL and uses an LLM to automatically create an event, extracting its name, description, and date.
 - **Personalized Content Generation**: Uses a local LLM to craft unique messages for different communication touchpoints (welcome, reminders, etc.).
 - **Multi-Channel Messaging**:
     - **Email**: Integrated with SendGrid for robust and trackable email delivery.
@@ -19,7 +20,7 @@ The core of the agent is a local LLM (powered by Hugging Face `transformers`) th
 
 ## 🛠️ Tech Stack
 
-- **Backend**: Python, FastAPI
+- **Backend**: Python, FastAPI, BeautifulSoup
 - **Database**: SQLAlchemy (defaults to SQLite)
 - **AI/ML**: Hugging Face `transformers` for local LLM inference
 - **Scheduling**: `APScheduler`
@@ -30,7 +31,7 @@ The core of the agent is a local LLM (powered by Hugging Face `transformers`) th
 ## 🚀 Getting Started
 
 ### 1. Prerequisites
-
+- MySQL Server
 - Python 3.8+
 - Hugging Face Account (if using a gated model)
 - SendGrid Account (for sending emails)
@@ -47,6 +48,8 @@ cd Event-Webinar-Engagement-Booster # Navigate into the newly created project fo
 ### 3. Install Dependencies
 
 Create a virtual environment and install the required packages from `requirements.txt`.
+
+> **Note:** This project uses `lxml` for parsing, which may require system-level dependencies. If `pip install` fails, you may need to install `libxml2-dev` and `libxslt-dev` (on Debian/Ubuntu) or equivalent packages for your OS.
 
 ```sh
 # Create a virtual environment (optional but recommended)
@@ -87,12 +90,15 @@ Create a `.env` file in the project root and add the following variables.
 
 ```env
 # --- Application Settings ---
-SECRET_KEY="a_very_strong_and_secret_key_for_jwt"
-DATABASE_URL="sqlite:///./database.db"
+DATABASE_URL="mysql+pymysql://user:password@localhost:3306/engage_sphere" # Example for MySQL
+SECRET_KEY="a_very_strong_and_secret_key_for_jwt" # Replace with a real secret in production
 
 # --- LLM Configuration ---
 ENABLE_LOCAL_LLM="true" # Set to "false" to use simple templates instead of the LLM
 LLM_MODEL_NAME="TinyLlama/TinyLlama-1.1B-Chat-v1.0" # Recommended small model
+
+# For higher accuracy on tasks like data extraction, consider a more powerful model like:
+# LLM_MODEL_NAME="mistralai/Mistral-7B-Instruct-v0.2"
 
 # --- Messaging Services ---
 SENDGRID_API_KEY="YOUR_SENDGRID_API_KEY"

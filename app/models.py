@@ -1,31 +1,36 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean
-from sqlalchemy.orm import relationship, backref
+from sqlalchemy import Boolean, Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy.orm import relationship
 from .database import Base
 
 class User(Base):
     __tablename__ = "users"
+
     id = Column(Integer, primary_key=True, index=True)
-    email = Column(String, unique=True, index=True, nullable=False)
+    email = Column(String, unique=True, index=True)
     name = Column(String)
-    hashed_password = Column(String, nullable=True) # Made nullable for now to support old users
+    hashed_password = Column(String)
     job_title = Column(String, nullable=True)
-    is_admin = Column(Boolean, default=False, nullable=False)
-    interests = Column(String, nullable=True)  # e.g., "AI,Python,Web-Dev"
+    is_admin = Column(Boolean, default=False)
+    interests = Column(String, nullable=True)
+    preferred_contact_method = Column(String, default="email")
+    phone_number = Column(String, nullable=True)
 
     registrations = relationship("Registration", back_populates="user")
 
 class Event(Base):
     __tablename__ = "events"
+
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
     description = Column(String)
-    event_time = Column(DateTime, nullable=False)
+    event_time = Column(DateTime)
     recording_url = Column(String, nullable=True)
 
-    registrations = relationship("Registration", back_populates="event", cascade="all, delete-orphan")
+    registrations = relationship("Registration", back_populates="event")
 
 class Registration(Base):
     __tablename__ = "registrations"
+
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     event_id = Column(Integer, ForeignKey("events.id"))

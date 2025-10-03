@@ -52,6 +52,10 @@ class RegistrationResponse(BaseModel):
 class ChatRequest(BaseModel):
     query: str
 
+# Schema for the AI event importer
+class ImportRequest(BaseModel):
+    url: str
+
 # Schema for user login
 class UserLogin(BaseModel):
     email: EmailStr
