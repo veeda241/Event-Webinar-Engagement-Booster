@@ -1,28 +1,68 @@
 import os
-import smtplib
-from email.message import EmailMessage
 from .database import SessionLocal
 from .models import User
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
+from twilio.rest import Client
 
-# Load email configuration from environment variables
-EMAIL_HOST = os.getenv("EMAIL_HOST")
-EMAIL_PORT = int(os.getenv("EMAIL_PORT", 587))
-EMAIL_USER = os.getenv("EMAIL_USER")
-EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
+# --- Configuration ---
+# Email Configuration (SendGrid)
+SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
+SENDGRID_FROM_EMAIL = os.getenv("SENDGRID_FROM_EMAIL")
+
+# Chat Configuration (Twilio for WhatsApp)
+TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
+TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
+TWILIO_WHATSAPP_FROM = os.getenv("TWILIO_WHATSAPP_FROM") # e.g., 'whatsapp:+14155238886'
+
+twilio_client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN) if TWILIO_ACCOUNT_SID else None
+
+def _send_email_sendgrid(to_email: str, subject: str, body: str):
+    """Sends an email using the SendGrid API."""
+    if not SENDGRID_API_KEY or not SENDGRID_FROM_EMAIL:
+        print("⚠️ SendGrid is not configured. Simulating email send.")
+        print(f"✅ [SIMULATED] Email to {to_email} | Subject: {subject}")
+        return
+
+    message = Mail(
+        from_email=SENDGRID_FROM_EMAIL,
+        to_emails=to_email,
+        subject=subject,
+        html_content=body.replace('\n', '<br>')) # Simple conversion to HTML
+    try:
+        sg = SendGridAPIClient(SENDGRID_API_KEY)
+        response = sg.send(message)
+        print(f"✅ Email sent to {to_email} via SendGrid. Status: {response.status_code}")
+    except Exception as e:
+        print(f"❌ Error sending email via SendGrid: {e}")
+
+def _send_whatsapp_twilio(to_phone: str, body: str):
+    """Sends a WhatsApp message using the Twilio API."""
+    if not twilio_client or not to_phone:
+        print("⚠️ Twilio is not configured or user has no phone number. Simulating WhatsApp message.")
+        print(f"✅ [SIMULATED] WhatsApp to {to_phone} | Body: {body.splitlines()[0]}")
+        return
+
+    try:
+        # Twilio requires the 'whatsapp:' prefix for the recipient number
+        to_whatsapp_number = f'whatsapp:{to_phone}'
+        message = twilio_client.messages.create(
+            from_=TWILIO_WHATSAPP_FROM,
+            body=body,
+            to=to_whatsapp_number
+        )
+        print(f"✅ WhatsApp message sent to {to_phone} (SID: {message.sid})")
+    except Exception as e:
+        print(f"❌ Error sending WhatsApp message via Twilio: {e}")
 
 def send_message(user_id: int, content: str):
     """
-    Sends a message to a user via SMTP.
+    Sends a message to a user based on their preferred contact method.
+    Routes to either SendGrid for email or Twilio for WhatsApp.
     """
     db = SessionLocal()
     try:
         user = db.query(User).filter(User.id == user_id).one()
-
-        # Respect the user's preferred contact method
-        if user.preferred_contact_method != 'email':
-            # In a real-world scenario, this would trigger a different service (e.g., WhatsApp, WebSocket push).
-            print(f"✅ Simulated chat message for {user.email}: {content.splitlines()[0]}")
-            return
 
         # Parse the subject and body from the LLM-generated content
         try:
@@ -30,21 +70,13 @@ def send_message(user_id: int, content: str):
             subject = subject_line.replace('Subject: ', '')
         except ValueError:
             subject = "A message from your event organizer"
-            body = content
+            body = content # If no subject, use the whole content as body
 
-        # Create the email message
-        msg = EmailMessage()
-        msg.set_content(body)
-        msg['Subject'] = subject
-        msg['From'] = EMAIL_USER
-        msg['To'] = user.email
-
-        with smtplib.SMTP(EMAIL_HOST, EMAIL_PORT) as server:
-            server.starttls()
-            server.login(EMAIL_USER, EMAIL_PASSWORD)
-            server.send_message(msg)
-        
-        print(f"✅ Email sent successfully to {user.email}")
+        # Route the message based on user preference
+        if user.preferred_contact_method == 'whatsapp':
+            _send_whatsapp_twilio(user.phone_number, f"*{subject}*\n\n{body}")
+        else: # Default to email
+            _send_email_sendgrid(user.email, subject, body)
 
     except Exception as e:
         print(f"❌ Error sending email to user {user_id}: {e}")

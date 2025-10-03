@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+python-dotenv
+passlib[bcrypt]
+python-jose[cryptography]
+apscheduler
+transformers
+torch
+accelerate
+sendgrid
+twilio
+pydantic[email]

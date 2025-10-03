@@ -7,6 +7,7 @@ class UserBase(BaseModel):
     email: EmailStr
     name: str
     job_title: Optional[str] = None
+    phone_number: Optional[str] = None
     preferred_contact_method: Optional[str] = 'email'
     interests: Optional[str] = None
 

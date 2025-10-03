@@ -31,11 +31,13 @@
             <input type="email" id="user-email" placeholder="Your Email" required>
             <input type="password" id="user-password" placeholder="Password" required>
             <input type="text" id="user-job-title" placeholder="Your Job Title (e.g., Software Engineer)">
+            <input type="tel" id="user-phone" placeholder="Phone Number (for WhatsApp)" style="display: none;">
             <input type="text" id="user-interests" placeholder="Your Interests (e.g., AI, Python)">
             <div class="form-group">
                 <label for="contact-method">Preferred Contact Method:</label>
                 <select id="contact-method">
                     <option value="email" selected>Email</option>
+                    <option value="whatsapp">WhatsApp</option>
                 </select>
             </div>
             <button type="submit" class="btn btn-primary">Sign Up</button>
@@ -57,12 +59,26 @@
         statusDiv.style.display = 'block';
     }
 
+    // Show/hide phone number field based on contact preference
+    const contactMethodSelect = document.getElementById('contact-method');
+    const phoneInput = document.getElementById('user-phone');
+    contactMethodSelect.addEventListener('change', (e) => {
+        if (e.target.value === 'whatsapp') {
+            phoneInput.style.display = 'block';
+            phoneInput.required = true;
+        } else {
+            phoneInput.style.display = 'none';
+            phoneInput.required = false;
+        }
+    });
+
     signupForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const name = document.getElementById('user-name').value;
         const email = document.getElementById('user-email').value;
         const password = document.getElementById('user-password').value;
         const job_title = document.getElementById('user-job-title').value;
+        const phone_number = document.getElementById('user-phone').value;
         const interests = document.getElementById('user-interests').value;
         const preferred_contact_method = document.getElementById('contact-method').value;
 
@@ -70,7 +86,7 @@
             const response = await fetch(`${API_BASE_URL}/users/`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, email, password, job_title, interests, preferred_contact_method })
+                body: JSON.stringify({ name, email, password, job_title, interests, preferred_contact_method, phone_number })
             });
 
             if (!response.ok) {

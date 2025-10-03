@@ -54,6 +54,7 @@ def create_user(db: Session, user: schemas.UserCreate):
         hashed_password=hashed_password,
         name=user.name,
         job_title=user.job_title,
+        phone_number=user.phone_number,
         preferred_contact_method=user.preferred_contact_method,
         interests=user.interests,
         is_admin=is_first_user
