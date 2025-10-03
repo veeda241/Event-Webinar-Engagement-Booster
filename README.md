@@ -67,7 +67,17 @@ python -m venv venv
     source venv/bin/activate
     ```
 
-# Install packages
+**Deactivate the virtual environment:**
+
+When you are finished working on the project, you can deactivate the virtual environment by simply running:
+
+```bash
+deactivate
+```
+
+### 4. Install Packages
+
+```bash
 pip install -r requirements.txt
 ```
 
