@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sign Up</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="theme-switch-wrapper">
+    <label class="theme-switch" for="theme-toggle">
+        <input type="checkbox" id="theme-toggle" />
+        <span class="slider"></span>
+    </label>
+</div>
+
+<div class="container">
+    <header class="app-header">
+        <a href="/" class="logo">
+            <span class="logo-symbol">✧</span>
+            <span class="logo-text">EngageSphere</span>
+        </a>
+    </header>
+
+    <h1>Create Your Account</h1>
+
+    <div class="form-section">
+        <form id="signup-form">
+            <input type="text" id="user-name" placeholder="Your Name" required>
+            <input type="email" id="user-email" placeholder="Your Email" required>
+            <input type="password" id="user-password" placeholder="Password" required>
+            <input type="text" id="user-job-title" placeholder="Your Job Title (e.g., Software Engineer)">
+            <input type="text" id="user-interests" placeholder="Your Interests (e.g., AI, Python)">
+            <div class="form-group">
+                <label for="contact-method">Preferred Contact Method:</label>
+                <select id="contact-method">
+                    <option value="email" selected>Email</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Sign Up</button>
+        </form>
+    </div>
+
+    <div id="status"></div>
+    <p class="form-footer">Already have an account? <a href="/login.html">Log in here</a>.</p>
+</div>
+
+<script>
+    const API_BASE_URL = "http://127.0.0.1:8001";
+    const signupForm = document.getElementById('signup-form');
+    const statusDiv = document.getElementById('status');
+
+    function showStatus(message, isError = false) {
+        statusDiv.textContent = message;
+        statusDiv.className = isError ? 'error' : 'success';
+        statusDiv.style.display = 'block';
+    }
+
+    signupForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('user-name').value;
+        const email = document.getElementById('user-email').value;
+        const password = document.getElementById('user-password').value;
+        const job_title = document.getElementById('user-job-title').value;
+        const interests = document.getElementById('user-interests').value;
+        const preferred_contact_method = document.getElementById('contact-method').value;
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/users/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, email, password, job_title, interests, preferred_contact_method })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                if (response.status === 400 && errorData.detail.includes("Email already registered")) {
+                    showStatus("This email is already registered. Please log in instead.", true);
+                    // Optional: Redirect to login after a delay
+                    setTimeout(() => { window.location.href = '/login.html'; }, 3000);
+                    return; // Stop further execution
+                }
+                // For other errors, just show the message
+                showStatus(`Error: ${errorData.detail || 'An unknown error occurred.'}`, true);
+                return;
+            }
+
+            const result = await response.json();
+            showStatus(`Account created successfully for ${result.email}! Redirecting to login...`);
+
+            setTimeout(() => {
+                window.location.href = '/login.html';
+            }, 2000);
+
+        } catch (error) {
+            // This will catch network errors or other issues not handled above
+            showStatus(`An unexpected error occurred: ${error.message}`, true);
+        }
+    });
+</script>
+
+<script>
+    // Standard theme switcher logic
+    const themeToggle = document.getElementById('theme-toggle');
+    const currentTheme = localStorage.getItem('theme');
+    if (currentTheme) {
+        document.body.setAttribute('data-theme', currentTheme);
+        if (currentTheme === 'dark') themeToggle.checked = true;
+    }
+    themeToggle.addEventListener('change', function() {
+        const theme = this.checked ? 'dark' : 'light';
+        document.body.setAttribute('data-theme', theme);
+        localStorage.setItem('theme', theme);
+    });
+</script>
+
+</body>
+</html>

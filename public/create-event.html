@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Create New Event</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="theme-switch-wrapper">
+    <label class="theme-switch" for="theme-toggle">
+        <input type="checkbox" id="theme-toggle" />
+        <span class="slider"></span>
+    </label>
+</div>
+
+<div class="container">
+    <header class="app-header">
+        <a href="/" class="logo">
+            <span class="logo-symbol">✧</span>
+            <span class="logo-text">EngageSphere</span>
+        </a>
+    </header>
+
+    <a href="/" class="back-link">&larr; Back to Events</a>
+    <h1>Create a New Event</h1>
+
+    <div class="form-section">
+        <form id="event-form">
+            <input type="text" id="event-name" placeholder="Event Name" required>
+            <textarea id="event-description" placeholder="Event Description" required></textarea>
+            <input type="datetime-local" id="event-time" required>
+            <button type="submit" class="btn btn-primary">Create Event</button>
+        </form>
+    </div>
+
+    <div id="status"></div>
+</div>
+
+<script>
+    const API_BASE_URL = "http://127.0.0.1:8001";
+    const eventForm = document.getElementById('event-form');
+    const statusDiv = document.getElementById('status');
+
+    // Protect this page: redirect if not logged in
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+        window.location.href = '/login.html';
+    }
+
+    // We will rely on the backend to enforce admin-only creation.
+    // An attempt by a non-admin will result in a 403 Forbidden error,
+    // which we will handle. A more advanced frontend could check the user's
+    // role from a /users/me endpoint first, but this is a robust starting point.
+
+    function showStatus(message, isError = false) {
+        statusDiv.textContent = message;
+        statusDiv.className = isError ? 'error' : 'success';
+        statusDiv.style.display = 'block';
+    }
+
+    eventForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const eventName = document.getElementById('event-name').value;
+        const eventDescription = document.getElementById('event-description').value;
+        const eventTimeValue = document.getElementById('event-time').value;
+
+        if (!eventTimeValue) {
+            showStatus('Please select a valid date and time for the event.', true);
+            return;
+        }
+        const eventTime = new Date(eventTimeValue).toISOString();
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/events/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    name: eventName,
+                    description: eventDescription,
+                    event_time: eventTime
+                })
+            });
+
+            if (response.status === 403) {
+                throw new Error('You do not have permission to create events.');
+            }
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || `HTTP error! Status: ${response.status}`);
+            }
+            const result = await response.json();
+            showStatus(`Event "${result.name}" created successfully! Redirecting...`);
+            
+            // Redirect to home page after a short delay
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 2000);
+
+        } catch (error) {
+            showStatus(`Error creating event: ${error.message}`, true);
+        }
+    });
+</script>
+
+<script>
+    const themeToggle = document.getElementById('theme-toggle');
+    const currentTheme = localStorage.getItem('theme');
+
+    if (currentTheme) {
+        document.body.setAttribute('data-theme', currentTheme);
+        if (currentTheme === 'dark') {
+            themeToggle.checked = true;
+        }
+    }
+
+    themeToggle.addEventListener('change', function() {
+        if (this.checked) {
+            document.body.setAttribute('data-theme', 'dark');
+            localStorage.setItem('theme', 'dark');
+        } else {
+            document.body.setAttribute('data-theme', 'light');
+            localStorage.setItem('theme', 'light');
+        }
+    });
+</script>
+
+</body>
+</html>

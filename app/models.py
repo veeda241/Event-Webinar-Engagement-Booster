@@ -1,5 +1,5 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
-from sqlalchemy.orm import relationship
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean
+from sqlalchemy.orm import relationship, backref
 from .database import Base
 
 class User(Base):
@@ -7,6 +7,9 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, index=True, nullable=False)
     name = Column(String)
+    hashed_password = Column(String, nullable=True) # Made nullable for now to support old users
+    job_title = Column(String, nullable=True)
+    is_admin = Column(Boolean, default=False, nullable=False)
     interests = Column(String, nullable=True)  # e.g., "AI,Python,Web-Dev"
 
     registrations = relationship("Registration", back_populates="user")
@@ -19,7 +22,7 @@ class Event(Base):
     event_time = Column(DateTime, nullable=False)
     recording_url = Column(String, nullable=True)
 
-    registrations = relationship("Registration", back_populates="event")
+    registrations = relationship("Registration", back_populates="event", cascade="all, delete-orphan")
 
 class Registration(Base):
     __tablename__ = "registrations"

@@ -4,6 +4,8 @@ sqlalchemy
 pydantic
 apscheduler
 python-dotenv
-requests  # For LLM API calls
+requests
+transformers
+torch
 # For email, e.g., smtplib is built-in, or use a library like:
 # sendgrid

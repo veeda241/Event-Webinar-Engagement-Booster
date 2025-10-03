@@ -1,125 +1,281 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
+<head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Event Engagement Booster</title>
+    <title>Upcoming Events</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
 
-    <style media="screen">
-      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f4f7f6; color: #333; margin: 0; padding: 2rem; }
-      .container { max-width: 800px; margin: auto; background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-      h1, h2 { color: #2c3e50; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; }
-      form { display: flex; flex-direction: column; gap: 1rem; }
-      input, textarea { padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 1rem; }
-      button { padding: 12px; background-color: #3498db; color: white; border: none; border-radius: 4px; font-size: 1rem; cursor: pointer; transition: background-color 0.3s; }
-      button:hover { background-color: #2980b9; }
-      .form-section { margin-bottom: 2rem; }
-      #status { margin-top: 1.5rem; padding: 1rem; border-radius: 4px; text-align: center; font-weight: bold; display: none; }
-      .success { background-color: #d4edda; color: #155724; }
-      .error { background-color: #f8d7da; color: #721c24; }
-      @media (max-width: 600px) {
-        body, #message { margin-top: 0; background: white; box-shadow: none; }
-        body { border-top: 16px solid #ffa100; }
-      }
-    </style>
-  </head>
-  <body>
-
-<div class="container">
-    <h1>Event & Webinar Engagement Booster</h1>
-
-    <div class="form-section">
-        <h2>Step 1: Create an Event</h2>
-        <form id="event-form">
-            <input type="text" id="event-name" placeholder="Event Name" required>
-            <textarea id="event-description" placeholder="Event Description" required></textarea>
-            <input type="datetime-local" id="event-time" required>
-            <button type="submit">Create Event</button>
-        </form>
-    </div>
-
-    <div class="form-section">
-        <h2>Step 2: Register a User</h2>
-        <form id="register-form">
-            <input type="number" id="register-event-id" placeholder="Event ID (from Step 1)" required>
-            <input type="text" id="user-name" placeholder="User's Name" required>
-            <input type="email" id="user-email" placeholder="User's Email" required>
-            <input type="text" id="user-interests" placeholder="User's Interests (e.g., AI, Python)">
-            <button type="submit">Register User & Start AI Agent</button>
-        </form>
-    </div>
-
-    <div id="status"></div>
+<div class="theme-switch-wrapper">
+    <label class="theme-switch" for="theme-toggle">
+        <input type="checkbox" id="theme-toggle" />
+        <span class="slider"></span>
+    </label>
 </div>
 
-    <script>
-        const API_BASE_URL = "http://127.0.0.1:8000"; // Your Python backend URL
-        const eventForm = document.getElementById('event-form');
-        const registerForm = document.getElementById('register-form');
-        const statusDiv = document.getElementById('status');
+<div class="container">
+    <header class="app-header">
+        <a href="/" class="logo">
+            <span class="logo-symbol">✧</span>
+            <span class="logo-text">EngageSphere</span>
+        </a>
+        <nav class="main-nav" id="main-nav">
+            <!-- Links will be dynamically added here -->
+            <!-- <a href="/signup.html" class="nav-link">Sign Up</a> -->
+            <!-- <a href="/login.html" class="nav-link">Login</a> -->
+        </nav>
+    </header>
 
-        function showStatus(message, isError = false) {
-            statusDiv.textContent = message;
-            statusDiv.className = isError ? 'error' : 'success';
-            statusDiv.style.display = 'block';
-            setTimeout(() => { statusDiv.style.display = 'none'; }, 5000);
-        }
+    <div class="page-header">
+        <h1>Upcoming Events</h1>
+        <a href="/create-event.html" class="btn btn-primary" id="create-event-btn" style="display: none;">Create New Event</a>
+    </div>
 
-        eventForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const eventName = document.getElementById('event-name').value;
-            const eventDescription = document.getElementById('event-description').value;
-            const eventTime = new Date(document.getElementById('event-time').value).toISOString();
+    <ul id="event-list" class="event-list">
+        <!-- Events will be loaded here by JavaScript -->
+    </ul>
+</div>
 
+<div class="chatbot-container">
+    <div class="chat-window" id="chat-window">
+        <div class="chat-header">EngageSphere Assistant</div>
+        <div class="chat-body" id="chat-body">
+            <div class="chat-message bot-message">Hello! How can I help you with EngageSphere today?</div>
+        </div>
+        <form class="chat-input" id="chat-form">
+            <input type="text" id="chat-input-field" placeholder="Ask a question..." autocomplete="off">
+            <button type="submit">➤</button>
+        </form>
+    </div>
+    <button class="chat-toggle" id="chat-toggle">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.5a1 1 0 0 0-.8.4l-1.9 2.533a1 1 0 0 1-1.6 0L5.3 12.4a1 1 0 0 0-.8-.4H2a2 2 0 0 1-2-2V2zm3.5 1a.5.5 0 0 0 0 1h9a.5.5 0 0 0 0-1h-9zm0 2.5a.5.5 0 0 0 0 1h9a.5.5 0 0 0 0-1h-9zm0 2.5a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1h-5z"/>
+        </svg>
+    </button>
+</div>
+
+<script>
+    const API_BASE_URL = "http://127.0.0.1:8001";
+    const eventList = document.getElementById('event-list');
+    const mainNav = document.getElementById('main-nav');
+    const token = localStorage.getItem('accessToken');
+    const createEventBtn = document.getElementById('create-event-btn');
+
+    // --- Login Wall ---
+    // If no token is found, redirect to the signup page.
+    // This effectively makes the entire site private.
+    if (!token) {
+        window.location.href = '/signup.html';
+    }
+
+    async function updateNavAndButtons() {
+        mainNav.innerHTML = ''; // Clear existing links
+        if (token) {
+            let userIsAdmin = false;
             try {
-                const response = await fetch(`${API_BASE_URL}/events/`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        name: eventName,
-                        description: eventDescription,
-                        event_time: eventTime
-                    })
+                const response = await fetch(`${API_BASE_URL}/users/me`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
                 });
-
-                if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-                const result = await response.json();
-                showStatus(`Event "${result.name}" created successfully! You can now register users for it.`);
-                eventForm.reset();
-            } catch (error) {
-                showStatus(`Error creating event: ${error.message}`, true);
-            }
-        });
-
-        registerForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const eventId = parseInt(document.getElementById('register-event-id').value);
-            const userName = document.getElementById('user-name').value;
-            const userEmail = document.getElementById('user-email').value;
-            const userInterests = document.getElementById('user-interests').value;
-
-            try {
-                const response = await fetch(`${API_BASE_URL}/register/`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        user: { name: userName, email: userEmail, interests: userInterests },
-                        event_id: eventId
-                    })
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.detail || `HTTP error! Status: ${response.status}`);
+                if (response.ok) {
+                    const user = await response.json();
+                    userIsAdmin = user.is_admin;
                 }
-                const result = await response.json();
-                showStatus(result.message);
-                registerForm.reset();
-            } catch (error) {
-                showStatus(`Error registering user: ${error.message}`, true);
-            }
-        });
-    </script>
+            } catch (e) { console.error("Could not fetch user details:", e); }
 
-  </body>
+            const logoutButton = document.createElement('a');
+            logoutButton.href = '#';
+            logoutButton.className = 'nav-link';
+            logoutButton.textContent = 'Logout';
+            logoutButton.onclick = () => {
+                localStorage.removeItem('accessToken');
+                window.location.reload();
+            };
+            mainNav.appendChild(logoutButton);
+
+            if (userIsAdmin) createEventBtn.style.display = 'inline-block';
+        } else {
+            // User is logged out
+            const signupLink = document.createElement('a');
+            signupLink.href = '/signup.html';
+            signupLink.className = 'nav-link';
+            signupLink.textContent = 'Sign Up';
+
+            const loginLink = document.createElement('a');
+            loginLink.href = '/login.html';
+            loginLink.className = 'nav-link';
+            loginLink.textContent = 'Login';
+
+            mainNav.appendChild(signupLink);
+            mainNav.appendChild(loginLink);
+            createEventBtn.style.display = 'none'; // Hide Create Event button
+        }
+    }
+
+    async function loadEvents() {
+        let registeredEventIds = [];
+        if (token) {
+            try {
+                const regResponse = await fetch(`${API_BASE_URL}/users/me/registrations`, { headers: { 'Authorization': `Bearer ${token}` } });
+                if (regResponse.ok) registeredEventIds = await regResponse.json();
+            } catch (e) { console.error("Could not fetch user registrations:", e); }
+        }
+        try {
+            const response = await fetch(`${API_BASE_URL}/events/`);
+            if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+            const events = await response.json();
+            
+            eventList.innerHTML = ''; // Clear the list
+            if (events.length === 0) {
+                eventList.innerHTML = '<li><p>No events found. Why not create one?</p></li>';
+                return;
+            }
+
+            events.forEach(event => {
+                const listItem = document.createElement('li');
+                listItem.className = 'event-item';
+
+                const eventDate = new Date(event.event_time).toLocaleString([], {
+                    dateStyle: 'medium',
+                    timeStyle: 'short'
+                });
+
+                const isRegistered = registeredEventIds.includes(event.id);
+                let actionButtonHtml;
+
+                if (isRegistered) {
+                    actionButtonHtml = `<button class="btn btn-secondary" disabled>Registered</button>`;
+                } else if (token) {
+                    actionButtonHtml = `<button class="btn btn-success" onclick="registerUserForEvent(${event.id}, this)">Register Now</button>`;
+                } else {
+                    actionButtonHtml = `<a href="/login.html" class="btn btn-success">Login to Register</a>`;
+                }
+
+                listItem.innerHTML = `
+                    <div class="event-details">
+                        <h3>${event.name}</h3>
+                        <p>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"/><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"/></svg>
+                            ${eventDate}
+                        </p>
+                        <p class="event-description">
+                            ${event.description}
+                        </p>
+                    </div>
+                    <div class="event-actions">
+                        ${actionButtonHtml}
+                    </div>
+                `;
+                eventList.appendChild(listItem);
+            });
+        } catch (error) {
+            console.error("Could not load events:", error);
+            eventList.innerHTML = '<p class="error">Could not load events. Please try again later.</p>';
+        }
+    }
+
+    async function registerUserForEvent(eventId, buttonElement) {
+        buttonElement.disabled = true;
+        buttonElement.textContent = 'Registering...';
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/register/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ event_id: eventId })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || 'Registration failed.');
+            }
+
+            // Success! Update the button state.
+            buttonElement.textContent = 'Registered';
+            buttonElement.className = 'btn btn-secondary'; // Change style to indicate success
+            // No need to re-enable, as they are now registered.
+
+        } catch (error) {
+            console.error('Registration error:', error);
+            alert(`Registration failed: ${error.message}`);
+            buttonElement.disabled = false; // Re-enable on failure
+            buttonElement.textContent = 'Register Now';
+        }
+    }
+
+    // Load events and update nav when the page first loads
+    document.addEventListener('DOMContentLoaded', () => {
+        // Run both async functions concurrently
+        Promise.all([updateNavAndButtons(), loadEvents()]);
+    });
+
+    // --- Theme Switcher Logic ---
+    const themeToggle = document.getElementById('theme-toggle');
+    const currentTheme = localStorage.getItem('theme');
+
+    if (currentTheme) {
+        document.body.setAttribute('data-theme', currentTheme);
+        if (currentTheme === 'dark') {
+            themeToggle.checked = true;
+        }
+    }
+
+    themeToggle.addEventListener('change', function() {
+        if (this.checked) {
+            document.body.setAttribute('data-theme', 'dark');
+            localStorage.setItem('theme', 'dark');
+        } else {
+            document.body.setAttribute('data-theme', 'light');
+            localStorage.setItem('theme', 'light');
+        }
+    });
+
+    // --- Chatbot Logic ---
+    const chatWindow = document.getElementById('chat-window');
+    const chatToggle = document.getElementById('chat-toggle');
+    const chatForm = document.getElementById('chat-form');
+    const chatInput = document.getElementById('chat-input-field');
+    const chatBody = document.getElementById('chat-body');
+
+    chatToggle.addEventListener('click', () => {
+        chatWindow.style.display = chatWindow.style.display === 'flex' ? 'none' : 'flex';
+    });
+
+    chatForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const query = chatInput.value.trim();
+        if (!query) return;
+
+        addMessage(query, 'user-message');
+        chatInput.value = '';
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/chatbot/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query })
+            });
+            if (!response.ok) throw new Error('Failed to get response from bot.');
+            const data = await response.json();
+            addMessage(data.response, 'bot-message');
+        } catch (error) {
+            console.error('Chatbot error:', error);
+            addMessage('Sorry, I encountered an error. Please try again.', 'bot-message');
+        }
+    });
+
+    function addMessage(text, className) {
+        const messageElement = document.createElement('div');
+        messageElement.className = `chat-message ${className}`;
+        messageElement.textContent = text;
+        chatBody.appendChild(messageElement);
+        chatBody.scrollTop = chatBody.scrollHeight; // Scroll to bottom
+    }
+</script>
+
+</body>
 </html>

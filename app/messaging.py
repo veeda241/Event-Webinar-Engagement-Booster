@@ -18,6 +18,12 @@ def send_message(user_id: int, content: str):
     try:
         user = db.query(User).filter(User.id == user_id).one()
 
+        # Respect the user's preferred contact method
+        if user.preferred_contact_method != 'email':
+            # In a real-world scenario, this would trigger a different service (e.g., WhatsApp, WebSocket push).
+            print(f"✅ Simulated chat message for {user.email}: {content.splitlines()[0]}")
+            return
+
         # Parse the subject and body from the LLM-generated content
         try:
             subject_line, body = content.split('\n\n', 1)
