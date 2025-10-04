@@ -1,20 +1,30 @@
 
-import os
 from fastapi.concurrency import run_in_threadpool
 from transformers import pipeline, AutoTokenizer
+from tqdm.auto import tqdm
 from .models import User, Event
+from .config import settings
 
 def create_llm_pipeline():
     """
     Initializes and returns the text-generation pipeline.
     This function is called once at application startup.
     """
-    model_name = os.getenv("LLM_MODEL_NAME", "TinyLlama/TinyLlama-1.1B-Chat-v1.0")
+    model_name = settings.LLM_MODEL_NAME
     print(f"🤖 Initializing local LLM pipeline with model: {model_name}...")
+    print("---")
+    print("--- NOTE: The first time you run this, the model will be downloaded from Hugging Face.")
+    print(f"--- The '{model_name}' model can be over 1GB, so this may take several minutes.")
+    print("--- The application may appear to be 'hanging' during the download, please be patient.")
+    print("---")
     try:
         # Initialize the pipeline. This will download the model on first run.
         # For models requiring authentication, ensure you are logged in via `huggingface-cli login`.
-        # You can add device=0 to use a GPU if available: pipeline(..., device=0)
+        # Using a custom progress bar with tqdm for better user feedback during download.
+        with tqdm(total=1, desc="Downloading LLM (if not cached)", unit="model") as pbar:
+            generator = pipeline("text-generation", model=model_name, trust_remote_code=True)
+            pbar.update(1)
+
         generator = pipeline("text-generation", model=model_name, trust_remote_code=True)
         print(f"✅ LLM Pipeline initialized successfully.")
         return generator
@@ -25,8 +35,8 @@ def create_llm_pipeline():
 async def generate_personalized_content(generator: pipeline, user: User, event: Event, message_type: str) -> str:
     """
     Generates personalized content using an LLM.
-    
-    message_type can be: 'welcome', 'content_preview', 'reminder_24h', 'reminder_1h', 'follow_up'
+
+    message_type can be: 'welcome', 'content_preview', 'reminder_24h', 'reminder_1h', 'event_starting', 'follow_up'
     """
     # The prompt is structured for an instruction-tuned model and includes a one-shot example for better formatting.
     prompt = f"""<|system|>You are a friendly and professional event assistant. Your task is to generate the content for a '{message_type}' email based on the provided details. The output must strictly follow the example format, starting with 'Subject:'.</s>
@@ -56,6 +66,7 @@ The Event Team
 - For a 'welcome' message, be warm, confirm their registration, and mention how the event relates to their interests or job title.
 - For a 'content_preview' message, generate excitement by giving a sneak peek of the event, like mentioning a key topic or a speaker's background.
 - For a 'reminder_24h' or 'reminder_1h' message, build excitement and provide a placeholder for the event link like [EVENT_LINK].
+- For an 'event_starting' message, be energetic and concise. Announce that the event is starting now and provide the event link placeholder [EVENT_LINK].
 - For a 'follow_up' message, thank them for attending and provide the recording link: {event.recording_url}.
 <|assistant|>
 """

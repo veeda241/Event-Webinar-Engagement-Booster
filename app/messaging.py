@@ -1,24 +1,16 @@
-import os
 from .database import SessionLocal
 from .models import User
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
 from twilio.rest import Client
+from .config import settings
 
-# --- Configuration ---
-# Email Configuration (SendGrid)
-SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
-SENDGRID_FROM_EMAIL = os.getenv("SENDGRID_FROM_EMAIL")
-
-# Chat Configuration (Twilio for WhatsApp)
-TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
-TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
-TWILIO_WHATSAPP_FROM = os.getenv("TWILIO_WHATSAPP_FROM") # e.g., 'whatsapp:+14155238886'
-
-twilio_client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN) if TWILIO_ACCOUNT_SID else None
+twilio_client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN) if settings.TWILIO_ACCOUNT_SID else None
 
 def _send_email_sendgrid(to_email: str, subject: str, body: str):
     """Sends an email using the SendGrid API."""
+    SENDGRID_API_KEY = settings.SENDGRID_API_KEY
+    SENDGRID_FROM_EMAIL = settings.SENDGRID_FROM_EMAIL
     if not SENDGRID_API_KEY or not SENDGRID_FROM_EMAIL:
         print("⚠️ SendGrid is not configured. Simulating email send.")
         print(f"✅ [SIMULATED] Email to {to_email} | Subject: {subject}")
@@ -47,7 +39,7 @@ def _send_whatsapp_twilio(to_phone: str, body: str):
         # Twilio requires the 'whatsapp:' prefix for the recipient number
         to_whatsapp_number = f'whatsapp:{to_phone}'
         message = twilio_client.messages.create(
-            from_=TWILIO_WHATSAPP_FROM,
+            from_=settings.TWILIO_WHATSAPP_FROM,
             body=body,
             to=to_whatsapp_number
         )

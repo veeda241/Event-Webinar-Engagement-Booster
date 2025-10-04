@@ -63,8 +63,15 @@ Join us for our annual developer conference, "CodeFusion 2024"! This year, we're
         if json_part.endswith("```"):
             json_part = json_part[:-3]
 
-        data = json.loads(json_part)
-        return schemas.EventCreate(**data)
+        # It's crucial to validate the LLM's output before parsing.
+        if not json_part.strip().startswith("{"):
+            raise json.JSONDecodeError("LLM did not return a JSON object.", json_part, 0)
+
+        event_data = json.loads(json_part)
+        return schemas.EventCreate(**event_data)
+    except json.JSONDecodeError as e:
+        print(f"❌ LLM returned invalid JSON: {e.doc}")
+        raise ValueError(f"The AI failed to produce valid JSON. Raw output: '{e.doc}'")
     except Exception as e:
         print(f"❌ LLM extraction failed: {e}")
         raise ValueError("The AI failed to extract valid event details from the provided URL.")

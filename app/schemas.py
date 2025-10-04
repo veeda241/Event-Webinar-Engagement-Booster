@@ -14,7 +14,7 @@ class UserBase(BaseModel):
 class EventBase(BaseModel):
     name: str
     description: str
-    event_time: datetime
+    event_time: Optional[datetime] = None
 
 # Schema for user output (never expose password)
 class User(UserBase):

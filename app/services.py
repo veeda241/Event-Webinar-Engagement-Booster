@@ -73,41 +73,41 @@ def send_scheduled_message(user_id: int, event_id: int, message_type: str, llm_p
         db.close()
 
 
-def schedule_all_communications(user_id: int, event_id: int, llm_pipeline):
+def schedule_all_communications(user: models.User, event: models.Event, llm_pipeline):
     """
     Schedules reminder and follow-up jobs with APScheduler.
-    Creates its own database session to ensure thread safety.
+    This function does not need its own database session as it receives the necessary objects.
     """
-    db = SessionLocal()
-    try:
-        user = db.query(models.User).filter(models.User.id == user_id).one()
-        event = db.query(models.Event).filter(models.Event.id == event_id).one()
+    print(f"🗓️  Scheduling communications for {user.email} for event '{event.name}'")
 
-        print(f"🗓️  Scheduling communications for {user.email} for event '{event.name}'")
+    now = datetime.utcnow()
+    user_id = user.id
+    event_id = event.id
+    
+    # Schedule content preview (e.g., 3 days before)
+    preview_time = event.event_time - timedelta(days=3)
+    if preview_time > now:
+        job_id_preview = f"preview_{user_id}_{event_id}"
+        scheduler.add_job(send_scheduled_message, 'date', run_date=preview_time, args=[user_id, event_id, 'content_preview', llm_pipeline], id=job_id_preview)
 
-        now = datetime.utcnow()
-        
-        # Schedule content preview (e.g., 3 days before)
-        preview_time = event.event_time - timedelta(days=3)
-        if preview_time > now:
-            job_id_preview = f"preview_{user_id}_{event_id}"
-            scheduler.add_job(send_scheduled_message, 'date', run_date=preview_time, args=[user_id, event_id, 'content_preview', llm_pipeline], id=job_id_preview)
+    # Schedule 24-hour reminder
+    reminder_24h_time = event.event_time - timedelta(hours=24)
+    if reminder_24h_time > now:
+        job_id_24h = f"reminder_24h_{user_id}_{event_id}"
+        scheduler.add_job(send_scheduled_message, 'date', run_date=reminder_24h_time, args=[user_id, event_id, 'reminder_24h', llm_pipeline], id=job_id_24h)
 
-        # Schedule 24-hour reminder
-        reminder_24h_time = event.event_time - timedelta(hours=24)
-        if reminder_24h_time > now:
-            job_id_24h = f"reminder_24h_{user_id}_{event_id}"
-            scheduler.add_job(send_scheduled_message, 'date', run_date=reminder_24h_time, args=[user_id, event_id, 'reminder_24h', llm_pipeline], id=job_id_24h)
+    # Schedule 1-hour reminder
+    reminder_1h_time = event.event_time - timedelta(hours=1)
+    if reminder_1h_time > now:
+        job_id_1h = f"reminder_1h_{user_id}_{event_id}"
+        scheduler.add_job(send_scheduled_message, 'date', run_date=reminder_1h_time, args=[user_id, event_id, 'reminder_1h', llm_pipeline], id=job_id_1h)
 
-        # Schedule 1-hour reminder
-        reminder_1h_time = event.event_time - timedelta(hours=1)
-        if reminder_1h_time > now:
-            job_id_1h = f"reminder_1h_{user_id}_{event_id}"
-            scheduler.add_job(send_scheduled_message, 'date', run_date=reminder_1h_time, args=[user_id, event_id, 'reminder_1h', llm_pipeline], id=job_id_1h)
+    # Schedule "event starting now" nudge
+    if event.event_time > now:
+        job_id_start = f"start_{user_id}_{event_id}"
+        scheduler.add_job(send_scheduled_message, 'date', run_date=event.event_time, args=[user_id, event_id, 'event_starting', llm_pipeline], id=job_id_start)
 
-        # Schedule post-event follow-up (e.g., 2 hours after)
-        follow_up_time = event.event_time + timedelta(hours=2)
-        job_id_follow_up = f"follow_up_{user_id}_{event_id}"
-        scheduler.add_job(send_scheduled_message, 'date', run_date=follow_up_time, args=[user_id, event_id, 'follow_up', llm_pipeline], id=job_id_follow_up)
-    finally:
-        db.close()
+    # Schedule post-event follow-up (e.g., 2 hours after)
+    follow_up_time = event.event_time + timedelta(hours=2)
+    job_id_follow_up = f"follow_up_{user_id}_{event_id}"
+    scheduler.add_job(send_scheduled_message, 'date', run_date=follow_up_time, args=[user_id, event_id, 'follow_up', llm_pipeline], id=job_id_follow_up)

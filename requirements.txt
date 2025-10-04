@@ -1,14 +1,12 @@
-fastapi
-uvicorn[standard]
-sqlalchemy
-pydantic
-PyMySQL
-apscheduler
-beautifulsoup4
-lxml
-python-dotenv
-requests
-transformers
-torch
-# For email, e.g., smtplib is built-in, or use a library like:
-sendgrid
+fastapi>=0.104.1
+uvicorn[standard]>=0.31.1
+sqlalchemy>=2.0.23
+pydantic>=2.11.0
+pydantic-settings>=2.5.2
+python-dotenv>=1.0.0
+transformers>=4.35.0
+--find-links https://download.pytorch.org/whl/cpu
+torch==2.1.0+cpu
+tqdm>=4.66.1
+python-multipart>=0.0.9
+anyio>=4.7.0

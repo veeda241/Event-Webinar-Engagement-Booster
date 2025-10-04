@@ -35,6 +35,7 @@ class Registration(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
     event_id = Column(Integer, ForeignKey("events.id"))
     registration_time = Column(DateTime)
+    job_id = Column(String, nullable=True) # Store the main job ID for this registration
 
     user = relationship("User", back_populates="registrations")
     event = relationship("Event", back_populates="registrations")

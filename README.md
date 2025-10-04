@@ -21,7 +21,7 @@ The core of the agent is a local LLM (powered by Hugging Face `transformers`) th
 ## 🛠️ Tech Stack
 
 - **Backend**: Python, FastAPI, BeautifulSoup
-- **Database**: SQLAlchemy (defaults to SQLite)
+- **Database**: SQLAlchemy, MySQL
 - **AI/ML**: Hugging Face `transformers` for local LLM inference
 - **Scheduling**: `APScheduler`
 - **Messaging**: SendGrid (Email), Twilio (WhatsApp)
@@ -40,14 +40,17 @@ The core of the agent is a local LLM (powered by Hugging Face `transformers`) th
 ### 2. Clone the Repository
 
 ```bash
-git clone <your-repo-url>
-# The clone command creates a directory named 'Event-Webinar-Engagement-Booster'.
-cd Event-Webinar-Engagement-Booster # Navigate into the newly created project folder.
+git clone https://github.com/your-username/Event-Webinar-Engagement-Booster.git
+cd Event-Webinar-Engagement-Booster
 ```
 
 ### 3. Install Dependencies
 
 Create a virtual environment and install the required packages from `requirements.txt`.
+
+> **Why use a virtual environment?** A virtual environment (`venv`) isolates your project's dependencies from your system's global Python packages. This prevents version conflicts between different projects and is highly recommended for all Python development. However, if you choose not to use one, you can install packages globally in the next step.
+
+---
 
 > **Note:** This project uses `lxml` for parsing, which may require system-level dependencies. If `pip install` fails, you may need to install `libxml2-dev` and `libxslt-dev` (on Debian/Ubuntu) or equivalent packages for your OS.
 
@@ -64,6 +67,8 @@ python -m venv venv
     ```
     > **Note:** If you get an error about script execution being disabled, run this command first to allow scripts for the current session, then try activating again:
     > `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process`
+    >
+    > **Troubleshooting:** If commands like `python` or `pip` still seem to use your global Python installation after activation, you can call them directly using their full path, e.g., `.\venv\Scripts\python.exe -m pip install ...`
 
 *   **On macOS / Linux:**
     ```bash
@@ -108,7 +113,7 @@ TWILIO_AUTH_TOKEN="YOUR_TWILIO_AUTH_TOKEN"
 TWILIO_WHATSAPP_FROM="whatsapp:+14155238886" # Your Twilio WhatsApp number
 ```
 
-### 5. Run the Application
+### 6. Run the Application
 
 Start the FastAPI server using the provided `run.py` script.
 

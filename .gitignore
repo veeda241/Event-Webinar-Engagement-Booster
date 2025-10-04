@@ -8,9 +8,15 @@ __pycache__/
 
 # Local data and databases
 data/
-*.db
-*.sqlite3
+*.db*
+*.sqlite*
 
 # Virtual environment
 venv/
 env/
+
+# Hugging Face model cache
+cache/
+
+# IDE settings
+.vscode/
