@@ -1,0 +1,297 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>EngageSphere / Settings</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✧</text></svg>">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="container">
+    <header class="app-header">
+        <a href="/" class="logo">
+            <span class="logo-symbol">✧</span>
+            <span class="logo-text">EngageSphere</span>
+        </a>
+    </header>
+
+    <a href="/" class="back-link">&larr; Back to Events</a>
+    <h1>Settings</h1>
+
+    <div id="status"></div>
+
+    <!-- Theme Settings -->
+    <div class="form-section">
+        <h2>Theme</h2>
+        <div class="form-group theme-switcher-group">
+            <label for="theme-toggle">Dark Mode</label>
+            <label class="theme-switch" for="theme-toggle">
+                <input type="checkbox" id="theme-toggle" />
+                <span class="slider"></span>
+            </label>
+        </div>
+    </div>
+
+    <!-- Profile Settings -->
+    <div class="form-section">
+        <h2>Profile Information</h2>
+        <form id="profile-form">
+            <div class="form-group">
+                <label for="user-image">Profile Picture</label>
+                <img id="profile-image-preview" src="https://via.placeholder.com/150" alt="Profile Preview" class="profile-preview">
+                <input type="file" id="user-image" accept="image/*">
+            </div>
+            <div class="form-group">
+                <label for="user-name">Name</label>
+                <input type="text" id="user-name" required>
+            </div>
+            <div class="form-group">
+                <label for="user-email">Email (read-only)</label>
+                <input type="email" id="user-email" readonly>
+            </div>
+            <div class="form-group">
+                <label for="user-job-title">Job Title</label>
+                <input type="text" id="user-job-title">
+            </div>
+            <div class="form-group">
+                <label for="user-interests">Interests</label>
+                <textarea id="user-interests" rows="3"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Save Profile</button>
+        </form>
+    </div>
+
+    <!-- Contact Settings -->
+    <div class="form-section">
+        <h2>Contact Preferences</h2>
+        <form id="contact-form">
+            <div class="form-group">
+                <label for="contact-method">Preferred Contact Method</label>
+                <select id="contact-method">
+                    <option value="email">Email</option>
+                    <option value="whatsapp">WhatsApp</option>
+                </select>
+            </div>
+            <div class="phone-input-group" id="phone-number-group" style="display: none;">
+                <select id="country-code-settings">
+                    <option value="+1">+1 (USA)</option>
+                    <option value="+44">+44 (UK)</option>
+                    <option value="+91">+91 (India)</option>
+                    <option value="+61">+61 (Australia)</option>
+                    <option value="+49">+49 (Germany)</option>
+                    <option value="+81">+81 (Japan)</option>
+                </select>
+                <input type="tel" id="user-phone" placeholder="Phone Number">
+            </div>
+            <button type="submit" class="btn btn-primary">Save Contact Preferences</button>
+        </form>
+    </div>
+
+</div>
+
+<script>
+    const API_BASE_URL = "http://127.0.0.1:8001";
+
+    // Auth handler
+    async function fetchWithAuth(url, options = {}) {
+        const token = localStorage.getItem('accessToken');
+        if (!token) {
+            window.location.href = '/login.html';
+            return new Promise(() => {});
+        }
+        const headers = { ...options.headers, 'Authorization': `Bearer ${token}` };
+        const response = await fetch(url, { ...options, headers });
+        if (response.status === 401) {
+            localStorage.removeItem('accessToken');
+            window.location.href = '/login.html';
+            return new Promise(() => {});
+        }
+        return response;
+    }
+
+    function showStatus(message, isError = false, duration = 3000) {
+        const statusDiv = document.getElementById('status');
+        statusDiv.textContent = message;
+        statusDiv.className = isError ? 'error' : 'success';
+        statusDiv.style.display = 'block';
+        setTimeout(() => {
+            statusDiv.style.display = 'none';
+        }, duration);
+    }
+
+    // Load current user data
+    async function loadUserSettings() {
+        try {
+            const response = await fetchWithAuth(`${API_BASE_URL}/users/me`);
+            if (!response.ok) throw new Error('Could not fetch user data.');
+            const user = await response.json();
+
+            document.getElementById('user-name').value = user.name;
+            document.getElementById('user-email').value = user.email;
+            document.getElementById('user-job-title').value = user.job_title || '';
+            document.getElementById('user-interests').value = user.interests || '';
+            document.getElementById('contact-method').value = user.preferred_contact_method || 'email';
+            
+            if (user.profile_image_url) {
+                document.getElementById('profile-image-preview').src = user.profile_image_url;
+            }
+
+            // Handle phone number with country code
+            const countryCodeSelect = document.getElementById('country-code-settings');
+            const phoneInput = document.getElementById('user-phone');
+            if (user.phone_number) {
+                let matchFound = false;
+                for (const option of countryCodeSelect.options) {
+                    if (user.phone_number.startsWith(option.value)) {
+                        countryCodeSelect.value = option.value;
+                        phoneInput.value = user.phone_number.substring(option.value.length);
+                        matchFound = true;
+                        break;
+                    }
+                }
+                if (!matchFound) {
+                    phoneInput.value = user.phone_number;
+                }
+            }
+
+            // Trigger change to show/hide phone field
+            document.getElementById('contact-method').dispatchEvent(new Event('change'));
+
+        } catch (error) {
+            showStatus(error.message, true);
+        }
+    }
+
+    // Image preview
+    const userImageInput = document.getElementById('user-image');
+    const imagePreview = document.getElementById('profile-image-preview');
+    userImageInput.addEventListener('change', () => {
+        const file = userImageInput.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                imagePreview.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    // Profile form submission
+    document.getElementById('profile-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        showStatus('Saving...', false);
+
+        let imageUrl = imagePreview.src.startsWith('data:') ? null : imagePreview.src;
+        const imageFile = userImageInput.files[0];
+
+        try {
+            // 1. Upload image if a new one is selected
+            if (imageFile) {
+                const formData = new FormData();
+                formData.append('file', imageFile);
+                const uploadResponse = await fetchWithAuth(`${API_BASE_URL}/upload-image/`, {
+                    method: 'POST',
+                    body: formData,
+                });
+                if (!uploadResponse.ok) throw new Error('Image upload failed.');
+                const uploadResult = await uploadResponse.json();
+                imageUrl = uploadResult.image_url;
+            }
+
+            // 2. Update profile with new data (including new image URL if any)
+            const payload = {
+                name: document.getElementById('user-name').value,
+                job_title: document.getElementById('user-job-title').value,
+                interests: document.getElementById('user-interests').value,
+                profile_image_url: imageUrl
+            };
+
+            const response = await fetchWithAuth(`${API_BASE_URL}/users/me`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.detail || 'Failed to update profile.');
+            }
+            showStatus('Profile updated successfully!', false);
+        } catch (error) {
+            showStatus(error.message, true);
+        }
+    });
+
+    // Contact form submission
+    document.getElementById('contact-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const preferred_contact_method = document.getElementById('contact-method').value;
+        let phone_number = null;
+        if (preferred_contact_method === 'whatsapp') {
+            const countryCode = document.getElementById('country-code-settings').value;
+            const localPhone = document.getElementById('user-phone').value;
+            phone_number = localPhone ? countryCode + localPhone.replace(/\D/g,'') : '';
+        }
+
+        const payload = {
+            preferred_contact_method: preferred_contact_method,
+            phone_number: phone_number
+        };
+
+        try {
+            const response = await fetchWithAuth(`${API_BASE_URL}/users/me/contact`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.detail || 'Failed to update contact preferences.');
+            }
+            showStatus('Contact preferences updated successfully!', false);
+        } catch (error) {
+            showStatus(error.message, true);
+        }
+    });
+
+    // Show/hide phone number field based on contact preference
+    const contactMethodSelect = document.getElementById('contact-method');
+    const phoneInputGroup = document.getElementById('phone-number-group');
+    contactMethodSelect.addEventListener('change', (e) => {
+        if (e.target.value === 'whatsapp') {
+            phoneInputGroup.style.display = 'flex';
+        } else {
+            phoneInputGroup.style.display = 'none';
+        }
+    });
+
+    document.addEventListener('DOMContentLoaded', loadUserSettings);
+
+    // Theme switcher logic
+    const themeToggle = document.getElementById('theme-toggle');
+    const currentTheme = localStorage.getItem('theme');
+
+    if (currentTheme) {
+        document.body.setAttribute('data-theme', currentTheme);
+        if (currentTheme === 'dark') {
+            themeToggle.checked = true;
+        }
+    }
+
+    themeToggle.addEventListener('change', function() {
+        if (this.checked) {
+            document.body.setAttribute('data-theme', 'dark');
+            localStorage.setItem('theme', 'dark');
+        } else {
+            document.body.setAttribute('data-theme', 'light');
+            localStorage.setItem('theme', 'light');
+        }
+    });
+
+</script>
+
+</body>
+</html>

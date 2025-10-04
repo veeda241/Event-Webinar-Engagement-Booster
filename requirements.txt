@@ -1,12 +1,12 @@
 fastapi>=0.104.1
 uvicorn[standard]>=0.31.1
 sqlalchemy>=2.0.23
+pymysql>=1.1.1
 pydantic>=2.11.0
-pydantic-settings>=2.5.2
+passlib[bcrypt]>=1.7.4
 python-dotenv>=1.0.0
 transformers>=4.35.0
---find-links https://download.pytorch.org/whl/cpu
-torch==2.1.0+cpu
+torch
 tqdm>=4.66.1
 python-multipart>=0.0.9
 anyio>=4.7.0

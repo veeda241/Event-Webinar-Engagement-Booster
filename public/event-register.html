@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>EngageSphere / Register for Event</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✧</text></svg>">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="container">
+    <header class="app-header">
+        <a href="/" class="logo">
+            <span class="logo-symbol">✧</span>
+            <span class="logo-text">EngageSphere</span>
+        </a>
+    </header>
+
+    <a href="/" class="back-link">&larr; Back to Events</a>
+    <h1 id="event-title">Register for Event</h1>
+    <p id="event-description-p"></p>
+
+    <div class="form-section">
+        <form id="register-form">
+            <input type="text" id="full-name" placeholder="Full Name" required>
+            <input type="email" id="email" placeholder="Email Address" required>
+            <div class="phone-input-group">
+                <select id="country-code-register">
+                    <option value="+1">+1 (USA)</option>
+                    <option value="+44">+44 (UK)</option>
+                    <option value="+91">+91 (India)</option>
+                    <option value="+61">+61 (Australia)</option>
+                    <option value="+49">+49 (Germany)</option>
+                    <option value="+81">+81 (Japan)</option>
+                </select>
+                <input type="tel" id="phone-number" placeholder="Phone Number (Optional)">
+            </div>
+            
+            <div class="form-group" id="payment-info-group" style="display: none;">
+                <label>Payment Information (Optional)</label>
+                <input type="text" id="payment-info" placeholder="e.g., Stripe or PayPal info">
+            </div>
+
+            <div class="form-group" id="team-details-group" style="display: none;">
+                <label>Team Details (Optional)</label>
+                <textarea id="team-details" placeholder="e.g., Team name, number of members"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="consent" required>
+                    I agree to the terms, cancellation policy, and data privacy agreement.
+                </label>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Complete Registration</button>
+        </form>
+    </div>
+
+    <div id="status"></div>
+</div>
+
+<script>
+    const API_BASE_URL = "http://127.0.0.1:8001";
+    const registerForm = document.getElementById('register-form');
+    const statusDiv = document.getElementById('status');
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const eventId = urlParams.get('event_id');
+
+    async function fetchWithAuth(url, options = {}) {
+        const token = localStorage.getItem('accessToken');
+        if (!token) {
+            window.location.href = '/login.html';
+            return new Promise(() => {}); 
+        }
+        const headers = { ...options.headers, 'Authorization': `Bearer ${token}` };
+        const response = await fetch(url, { ...options, headers });
+        if (response.status === 401) {
+            localStorage.removeItem('accessToken');
+            window.location.href = '/login.html';
+            return new Promise(() => {});
+        }
+        return response;
+    }
+
+    if (!eventId) {
+        document.querySelector('.container').innerHTML = '<h1>Error: Event ID is missing.</h1><a href="/" class="back-link">&larr; Go back</a>';
+    }
+
+    // Fetch event details to display on the page
+    async function loadEventDetails() {
+        try {
+            // Public endpoint, no auth needed
+            const response = await fetch(`${API_BASE_URL}/events/${eventId}`);
+            if (!response.ok) throw new Error('Event not found');
+            const event = await response.json();
+            document.getElementById('event-title').textContent = `Register for ${event.name}`;
+            document.getElementById('event-description-p').textContent = event.description;
+
+            // Conditionally show fields based on event description
+            const description = event.description.toLowerCase();
+            const paymentGroup = document.getElementById('payment-info-group');
+            const teamGroup = document.getElementById('team-details-group');
+
+            if (/payment|paid|fee|price|cost|\$/.test(description)) {
+                paymentGroup.style.display = 'block';
+            }
+
+            if (/team|group/.test(description)) {
+                teamGroup.style.display = 'block';
+            }
+
+        } catch (error) {
+            document.querySelector('.container').innerHTML = `<h1>Error: ${error.message}</h1><a href="/" class="back-link">&larr; Go back</a>`;
+        }
+    }
+
+    registerForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const countryCode = document.getElementById('country-code-register').value;
+        const localPhone = document.getElementById('phone-number').value;
+        const fullPhoneNumber = localPhone ? countryCode + localPhone.replace(/\D/g,'') : null;
+
+        const registrationData = {
+            event_id: parseInt(eventId),
+            full_name: document.getElementById('full-name').value,
+            email: document.getElementById('email').value,
+            phone_number: fullPhoneNumber,
+            payment_info: document.getElementById('payment-info').value,
+            consent_agreed: document.getElementById('consent').checked,
+            team_details: document.getElementById('team-details').value,
+        };
+
+        try {
+            const response = await fetchWithAuth(`${API_BASE_URL}/detailed-register/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(registrationData)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || 'Registration failed.');
+            }
+
+            statusDiv.className = 'success';
+            statusDiv.textContent = 'Registration successful! Redirecting...';
+            statusDiv.style.display = 'block';
+
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 2000);
+
+        } catch (error) {
+            statusDiv.className = 'error';
+            statusDiv.textContent = `Error: ${error.message}`;
+            statusDiv.style.display = 'block';
+        }
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+        if (eventId) {
+            loadEventDetails();
+        }
+    });
+</script>
+
+</body>
+</html>

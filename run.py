@@ -16,4 +16,4 @@ if __name__ == "__main__":
     os.environ["HF_HOME"] = cache_dir
 
     # Point uvicorn to the 'app' object inside the 'app.main' module.
-    uvicorn.run("app.main:app", host="127.0.0.1", port=8001, reload=True)
+    uvicorn.run("app.main:app", host="127.0.0.1", port=8001, reload=True, reload_dirs=["app"])

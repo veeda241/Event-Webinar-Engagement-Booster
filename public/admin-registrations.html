@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>EngageSphere / Event Registrations</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✧</text></svg>">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="container">
+    <header class="app-header">
+        <a href="/" class="logo">
+            <span class="logo-symbol">✧</span>
+            <span class="logo-text">EngageSphere</span>
+        </a>
+    </header>
+
+    <a href="/" class="back-link">&larr; Back to Events</a>
+    <h1 id="event-title">Event Registrations</h1>
+
+    <div id="registrations-table-container">
+        <!-- Registrations will be loaded here by JavaScript -->
+    </div>
+</div>
+
+<script>
+    const API_BASE_URL = "http://127.0.0.1:8001";
+    const urlParams = new URLSearchParams(window.location.search);
+    const eventId = urlParams.get('event_id');
+
+    async function fetchWithAuth(url, options = {}) {
+        const token = localStorage.getItem('accessToken');
+        if (!token) {
+            window.location.href = '/login.html';
+            return new Promise(() => {}); 
+        }
+        const headers = { ...options.headers, 'Authorization': `Bearer ${token}` };
+        const response = await fetch(url, { ...options, headers });
+        if (response.status === 401) {
+            localStorage.removeItem('accessToken');
+            window.location.href = '/login.html';
+            return new Promise(() => {});
+        }
+        return response;
+    }
+
+    if (!eventId) {
+        document.querySelector('.container').innerHTML = '<h1>Error: Event ID is missing.</h1><a href="/" class="back-link">&larr; Go back</a>';
+    }
+
+    async function loadRegistrations() {
+        try {
+            // Fetch event details (public, no auth needed)
+            const eventResponse = await fetch(`${API_BASE_URL}/events/${eventId}`);
+            if (!eventResponse.ok) throw new Error('Event not found');
+            const event = await eventResponse.json();
+            document.getElementById('event-title').textContent = `Registrations for ${event.name}`;
+
+            // Fetch registrations (private, auth needed)
+            const response = await fetchWithAuth(`${API_BASE_URL}/registrations/${eventId}`);
+
+            if (response.status === 403) {
+                throw new Error('You do not have permission to view these registrations.');
+            }
+            if (!response.ok) {
+                throw new Error('Could not load registrations.');
+            }
+
+            const registrations = await response.json();
+            const container = document.getElementById('registrations-table-container');
+
+            if (registrations.length === 0) {
+                container.innerHTML = '<p>No registrations found for this event.</p>';
+                return;
+            }
+
+            const table = document.createElement('table');
+            table.innerHTML = `
+                <thead>
+                    <tr>
+                        <th>Full Name</th>
+                        <th>Email</th>
+                        <th>Phone Number</th>
+                        <th>Team Details</th>
+                        <th>Registered On</th>
+                    </tr>
+                </thead>
+                <tbody>
+                </tbody>
+            `;
+            const tbody = table.querySelector('tbody');
+            registrations.forEach(reg => {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>${reg.full_name}</td>
+                    <td>${reg.email}</td>
+                    <td>${reg.phone_number || 'N/A'}</td>
+                    <td>${reg.team_details || 'N/A'}</td>
+                    <td>${new Date(reg.registration_time).toLocaleString()}</td>
+                `;
+            });
+            container.innerHTML = '';
+            container.appendChild(table);
+
+        } catch (error) {
+            const container = document.getElementById('registrations-table-container');
+            container.innerHTML = `<p class="error">${error.message}</p>`;
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        if (eventId) {
+            loadRegistrations();
+        }
+    });
+</script>
+
+</body>
+</html>

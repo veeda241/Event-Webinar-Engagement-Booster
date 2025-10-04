@@ -92,9 +92,33 @@ The Event Team
 
 async def generate_chatbot_response(generator: pipeline, query: str, context: str) -> str:
     """
-    Generates a response for the chatbot based on a user query and project context.
+    Analyzes the user's query to determine intent and generate a response.
+    - If the intent is to perform an action (register, cancel), it returns a JSON string with the action and entities.
+    - If the intent is a general question, it returns a natural language response.
     """
-    prompt = f"""<|system|>You are a helpful assistant for the "EngageSphere" application. Your goal is to answer user questions based *only* on the provided context about the project. If the answer is not in the context, say that you don't have information on that topic. Be friendly and concise.</s>
+    # This new prompt is much more advanced. It asks the LLM to act as a function-calling agent.
+    # It must determine if the user wants to chat or perform an action, and then return a specific JSON format.
+    
+    # Truncate context to avoid exceeding model's max sequence length
+    max_context_length = 3000 # Characters, a safe approximation
+    if len(context) > max_context_length:
+        context = context[:max_context_length] + "\n... (context truncated)"
+
+    prompt = f"""<|system|>You are the AI assistant for "EngageSphere". Your primary role is to help users by either answering their questions or performing actions for them. Analyze the user's query and the provided context, then choose one of the following two paths:
+
+1.  **Function Call**: If the user's intent is to perform an action like registering for an event, canceling a registration, or listing their events, you MUST return a JSON object with the key `"action"` and other relevant parameters.
+    - The possible actions are: `"register"`, `"cancel"`, `"list_registrations"`.
+    - For `"register"` and `"cancel"`, you MUST also include an `"event_name"` key with the name of the event extracted from the query.
+    - **Example 1 (Register)**: User asks "Can you sign me up for the AI conference?", you return `{{"action": "register", "event_name": "AI Conference"}}`
+    - **Example 2 (Cancel)**: User asks "I can't make it to the Data Summit, please cancel it.", you return `{{"action": "cancel", "event_name": "Data Summit"}}`
+    - **Example 3 (List)**: User asks "What am I registered for?", you return `{{"action": "list_registrations"}}`
+
+2.  **Conversational Response**: If the user's query is a general question, a greeting, or anything that doesn't map to a function call, you MUST return a JSON object with a single key `"response"` containing your friendly, conversational answer. Base your answer ONLY on the provided "Project Context". If the answer isn't in the context, say you don't have that information.
+    - **Example**: User asks "What is EngageSphere?", you return `{{"response": "EngageSphere is an AI-powered agent designed to boost engagement for webinars and events."}}`
+
+You must only return a single, valid JSON object and nothing else.
+
+</s>
 <|user|>
 
 ### Project Context
@@ -111,9 +135,24 @@ async def generate_chatbot_response(generator: pipeline, query: str, context: st
         if generator is None:
             raise RuntimeError("LLM pipeline is not available.")
             
-        outputs = await run_in_threadpool(generator, prompt, max_new_tokens=150, do_sample=True, temperature=0.7, top_k=50, top_p=0.95)
+        outputs = await run_in_threadpool(generator, prompt, max_new_tokens=150, do_sample=False) # Use do_sample=False for more predictable JSON
         generated_text = outputs[0]['generated_text']
-        return generated_text.split("<|assistant|>")[1].strip()
+        
+        # Extract the JSON part of the response
+        json_response = generated_text.split("<|assistant|>")[1].strip()
+
+        # It's crucial to validate that the output is valid JSON before returning it.
+        # The endpoint will handle the logic of parsing it.
+        try:
+            # Test if it's valid JSON
+            import json
+            json.loads(json_response)
+            return json_response
+        except json.JSONDecodeError:
+            print(f"❌ Chatbot LLM returned invalid JSON: {json_response}")
+            # Fallback to a simple response if the LLM fails to produce valid JSON
+            return '{{"response": "I\'m sorry, I had a little trouble understanding that. Could you please rephrase?"}}'
+
     except Exception as e:
         print(f"❌ Chatbot LLM generation failed: {e}")
-        return "I'm sorry, but I'm having trouble connecting to my brain right now. Please try again in a moment."
+        return '{{"response": "I\'m sorry, but I\'m having trouble connecting to my brain right now. Please try again in a moment."}}'

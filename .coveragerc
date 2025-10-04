@@ -1,0 +1,12 @@
+[run]
+branch = True
+source =
+    .
+omit =
+    */tests/*
+    */venv/*
+    run.py
+
+[report]
+show_missing = True
+skip_covered = True

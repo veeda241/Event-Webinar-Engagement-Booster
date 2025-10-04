@@ -46,7 +46,7 @@ async def process_registration(db: Session, user: models.User, event_id: int, ll
 
     # 3. Send instant welcome message
     welcome_content = await llm_integration.generate_personalized_content(llm_pipeline, user, event, 'welcome')
-    messaging.send_message(user.id, welcome_content)
+    await messaging.send_message(user.id, welcome_content)
 
     return user, event
 
@@ -68,7 +68,7 @@ def send_scheduled_message(user_id: int, event_id: int, message_type: str, llm_p
         # For this project, we'll create a simple sync wrapper.
         import asyncio
         content = asyncio.run(llm_integration.generate_personalized_content(llm_pipeline, user, event, message_type))
-        messaging.send_message(user.id, content)
+        asyncio.run(messaging.send_message(user.id, content))
     finally:
         db.close()
 
@@ -111,3 +111,41 @@ def schedule_all_communications(user: models.User, event: models.Event, llm_pipe
     follow_up_time = event.event_time + timedelta(hours=2)
     job_id_follow_up = f"follow_up_{user_id}_{event_id}"
     scheduler.add_job(send_scheduled_message, 'date', run_date=follow_up_time, args=[user_id, event_id, 'follow_up', llm_pipeline], id=job_id_follow_up)
+
+def find_event_by_name(db: Session, event_name: str) -> models.Event | None:
+    """Finds an event by its name, case-insensitively."""
+    return db.query(models.Event).filter(models.Event.name.ilike(f"%{event_name}%")).first()
+
+def get_user_registrations(db: Session, user_id: int) -> list[models.Event]:
+    """Gets all upcoming events a user is registered for."""
+    return db.query(models.Event).join(models.Registration).filter(
+        models.Registration.user_id == user_id,
+        models.Event.event_time >= datetime.utcnow()
+    ).all()
+
+def cancel_registration(db: Session, user_id: int, event_id: int) -> bool:
+    """
+    Cancels a user's registration for an event and removes all associated scheduled jobs.
+    """
+    # 1. Find the registration
+    registration = db.query(models.Registration).filter_by(user_id=user_id, event_id=event_id).first()
+    if not registration:
+        return False # Or raise an error
+
+    # 2. Find and remove all associated jobs from the scheduler
+    # The job IDs were created with a predictable pattern: f"{job_type}_{user_id}_{event_id}"
+    job_types = ["preview", "reminder_24h", "reminder_1h", "start", "follow_up"]
+    for job_type in job_types:
+        job_id = f"{job_type}_{user_id}_{event_id}"
+        try:
+            if scheduler.get_job(job_id):
+                scheduler.remove_job(job_id)
+                print(f"✅ Canceled scheduled job: {job_id}")
+        except Exception as e:
+            # This can happen if the job has already run or was never scheduled, which is fine.
+            print(f"ⓘ Could not cancel job {job_id} (it may have already run): {e}")
+
+    # 3. Delete the registration from the database
+    db.delete(registration)
+    db.commit()
+    return True

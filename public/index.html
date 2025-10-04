@@ -3,17 +3,13 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Upcoming Events</title>
+    <title>EngageSphere / Upcoming Events</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✧</text></svg>">
     <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
 
-<div class="theme-switch-wrapper">
-    <label class="theme-switch" for="theme-toggle">
-        <input type="checkbox" id="theme-toggle" />
-        <span class="slider"></span>
-    </label>
-</div>
+
 
 <div class="container">
     <header class="app-header">
@@ -56,77 +52,160 @@
     </button>
 </div>
 
+
+
 <script>
     const API_BASE_URL = "http://127.0.0.1:8001";
     const eventList = document.getElementById('event-list');
     const mainNav = document.getElementById('main-nav');
-    const token = localStorage.getItem('accessToken');
     const createEventBtn = document.getElementById('create-event-btn');
 
-    // --- Login Wall ---
-    // If no token is found, redirect to the signup page.
-    // This effectively makes the entire site private.
-    if (!token) {
-        window.location.href = '/signup.html';
+    /**
+     * A wrapper for the fetch API that automatically handles JWT authentication
+     * and redirects to the login page on 401 Unauthorized errors.
+     */
+    async function fetchWithAuth(url, options = {}) {
+        const token = localStorage.getItem('accessToken');
+
+        if (!token) {
+            window.location.href = '/login.html';
+            // Return a promise that never resolves to prevent further execution
+            return new Promise(() => {});
+        }
+
+        const headers = {
+            ...options.headers,
+            'Authorization': `Bearer ${token}`
+        };
+
+        const response = await fetch(url, { ...options, headers });
+
+        if (response.status === 401) {
+            localStorage.removeItem('accessToken');
+            window.location.href = '/login.html';
+            return new Promise(() => {});
+        }
+
+        return response;
     }
 
+
     async function updateNavAndButtons() {
+        const mainNav = document.getElementById('main-nav');
         mainNav.innerHTML = ''; // Clear existing links
+        const token = localStorage.getItem('accessToken');
+
         if (token) {
-            let userIsAdmin = false;
+            let user = null;
             try {
-                const response = await fetch(`${API_BASE_URL}/users/me`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
+                const response = await fetchWithAuth(`${API_BASE_URL}/users/me`);
                 if (response.ok) {
-                    const user = await response.json();
-                    userIsAdmin = user.is_admin;
+                    user = await response.json();
+                } else if (response.status !== 401) { 
+                    console.error("Failed to fetch user details:", response.statusText);
                 }
-            } catch (e) { console.error("Could not fetch user details:", e); }
+            } catch (e) { 
+                console.error("Could not fetch user details:", e); 
+            }
+
+            if (user && user.profile_image_url) {
+                const profilePic = document.createElement('img');
+                profilePic.src = user.profile_image_url;
+                profilePic.alt = 'Profile';
+                profilePic.className = 'nav-profile-pic';
+                mainNav.appendChild(profilePic);
+            }
+
+            const settingsLink = document.createElement('a');
+            settingsLink.href = '/settings.html';
+            settingsLink.className = 'btn btn-secondary';
+            settingsLink.textContent = 'Settings';
+            mainNav.appendChild(settingsLink);
 
             const logoutButton = document.createElement('a');
             logoutButton.href = '#';
-            logoutButton.className = 'nav-link';
+            logoutButton.className = 'btn btn-danger';
             logoutButton.textContent = 'Logout';
             logoutButton.onclick = () => {
                 localStorage.removeItem('accessToken');
-                window.location.reload();
+                window.location.href = '/login.html'; // Go to login after logout
             };
             mainNav.appendChild(logoutButton);
 
-            if (userIsAdmin) createEventBtn.style.display = 'inline-block';
+            if (user && user.is_admin) createEventBtn.style.display = 'inline-block';
+
         } else {
-            // User is logged out
+            // If there's no token, show login/signup buttons
             const signupLink = document.createElement('a');
             signupLink.href = '/signup.html';
-            signupLink.className = 'nav-link';
+            signupLink.className = 'btn btn-secondary';
             signupLink.textContent = 'Sign Up';
 
             const loginLink = document.createElement('a');
             loginLink.href = '/login.html';
-            loginLink.className = 'nav-link';
+            loginLink.className = 'btn btn-primary';
             loginLink.textContent = 'Login';
 
             mainNav.appendChild(signupLink);
             mainNav.appendChild(loginLink);
-            createEventBtn.style.display = 'none'; // Hide Create Event button
+            createEventBtn.style.display = 'none';
+        }
+    }
+
+    async function deleteEvent(eventId) {
+        if (!confirm('Are you sure you want to delete this event? This will also cancel all scheduled communications for it.')) {
+            return;
+        }
+
+        try {
+            const response = await fetchWithAuth(`${API_BASE_URL}/events/${eventId}`, {
+                method: 'DELETE',
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || 'Failed to delete event.');
+            }
+            
+            alert('Event deleted successfully!');
+            loadEvents(); // Refresh the event list
+
+        } catch (error) {
+            console.error('Error deleting event:', error);
+            alert(`Error: ${error.message}`);
         }
     }
 
     async function loadEvents() {
-        let registeredEventIds = [];
-        if (token) {
-            try {
-                const regResponse = await fetch(`${API_BASE_URL}/users/me/registrations`, { headers: { 'Authorization': `Bearer ${token}` } });
-                if (regResponse.ok) registeredEventIds = await regResponse.json();
-            } catch (e) { console.error("Could not fetch user registrations:", e); }
-        }
+        const eventList = document.getElementById('event-list');
+        eventList.innerHTML = ''; // Clear list
+        for (let i = 0; i < 3; i++) { /* ... skeleton loader code ... */ }
+
         try {
+            let registeredEventIds = [];
+            let userIsAdmin = false;
+            const token = localStorage.getItem('accessToken');
+
+            // Fetch user-specific data only if logged in
+            if (token) {
+                const [regResponse, userResponse] = await Promise.all([
+                    fetchWithAuth(`${API_BASE_URL}/users/me/registrations`),
+                    fetchWithAuth(`${API_BASE_URL}/users/me`)
+                ]);
+
+                if (regResponse.ok) registeredEventIds = await regResponse.json();
+                if (userResponse.ok) {
+                    const user = await userResponse.json();
+                    userIsAdmin = user.is_admin;
+                }
+            }
+
+            // Events are public, so we fetch them without auth
             const response = await fetch(`${API_BASE_URL}/events/`);
             if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
             const events = await response.json();
             
-            eventList.innerHTML = ''; // Clear the list
+            eventList.innerHTML = ''; // Clear skeletons
             if (events.length === 0) {
                 eventList.innerHTML = '<li><p>No events found. Why not create one?</p></li>';
                 return;
@@ -135,103 +214,85 @@
             events.forEach(event => {
                 const listItem = document.createElement('li');
                 listItem.className = 'event-item';
-
-                const eventDate = new Date(event.event_time).toLocaleString([], {
-                    dateStyle: 'medium',
-                    timeStyle: 'short'
-                });
-
+                const eventDate = new Date(event.event_time).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
                 const isRegistered = registeredEventIds.includes(event.id);
-                let actionButtonHtml;
 
+                let imageHtml = '';
+                if (event.image_url) {
+                    imageHtml = `<img src="${event.image_url}" alt="${event.name}" class="event-image">`;
+                }
+
+                let actionButtonHtml = '';
                 if (isRegistered) {
                     actionButtonHtml = `<button class="btn btn-secondary" disabled>Registered</button>`;
                 } else if (token) {
-                    actionButtonHtml = `<button class="btn btn-success" onclick="registerUserForEvent(${event.id}, this)">Register Now</button>`;
+                    actionButtonHtml = `<a href="/event-register.html?event_id=${event.id}" class="btn btn-success">Register Now</a>`;
                 } else {
                     actionButtonHtml = `<a href="/login.html" class="btn btn-success">Login to Register</a>`;
                 }
 
+                if (userIsAdmin) {
+                    actionButtonHtml += `<a href="/admin-registrations.html?event_id=${event.id}" class="btn btn-secondary" style="margin-left: 10px;">View Registrations</a>`;
+                    actionButtonHtml += `<button onclick="deleteEvent(${event.id})" class="btn btn-danger" style="margin-left: 10px;">Delete</button>`;
+                }
+
                 listItem.innerHTML = `
+                    ${imageHtml}
                     <div class="event-details">
                         <h3>${event.name}</h3>
                         <p>
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"/><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"/></svg>
                             ${eventDate}
                         </p>
-                        <p class="event-description">
-                            ${event.description}
-                        </p>
+                        <p class="event-description">${event.description}</p>
                     </div>
-                    <div class="event-actions">
-                        ${actionButtonHtml}
-                    </div>
-                `;
+                    <div class="event-actions">${actionButtonHtml}</div>`;
                 eventList.appendChild(listItem);
             });
         } catch (error) {
-            console.error("Could not load events:", error);
-            eventList.innerHTML = '<p class="error">Could not load events. Please try again later.</p>';
-        }
-    }
-
-    async function registerUserForEvent(eventId, buttonElement) {
-        buttonElement.disabled = true;
-        buttonElement.textContent = 'Registering...';
-
-        try {
-            const response = await fetch(`${API_BASE_URL}/register/`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ event_id: eventId })
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.detail || 'Registration failed.');
+            // Avoid showing error if it's a redirect from fetchWithAuth
+            if (error.name !== 'AbortError') {
+                 console.error("Could not load events:", error);
+                 eventList.innerHTML = '<p class="error">Could not load events. Please try again later.</p>';
             }
+        }
+    }
 
-            // Success! Update the button state.
-            buttonElement.textContent = 'Registered';
-            buttonElement.className = 'btn btn-secondary'; // Change style to indicate success
-            // No need to re-enable, as they are now registered.
-
+    async function checkChatbotStatus() {
+        const chatToggle = document.getElementById('chat-toggle');
+        try {
+            const response = await fetch(`${API_BASE_URL}/health/`);
+            if (!response.ok) throw new Error('Health check failed.');
+            
+            const data = await response.json();
+            if (data.llm_status !== 'ok') {
+                chatToggle.disabled = true;
+                chatToggle.style.backgroundColor = '#888'; // Grey out the button
+                chatToggle.style.cursor = 'not-allowed';
+                // Optional: add a title to explain why it's disabled
+                chatToggle.title = 'Chatbot is currently unavailable.';
+            }
         } catch (error) {
-            console.error('Registration error:', error);
-            alert(`Registration failed: ${error.message}`);
-            buttonElement.disabled = false; // Re-enable on failure
-            buttonElement.textContent = 'Register Now';
+            console.error('Chatbot health check failed:', error);
+            chatToggle.disabled = true;
+            chatToggle.style.backgroundColor = '#888';
+            chatToggle.style.cursor = 'not-allowed';
+            chatToggle.title = 'Chatbot is currently unavailable.';
         }
     }
 
-    // Load events and update nav when the page first loads
     document.addEventListener('DOMContentLoaded', () => {
-        // Run both async functions concurrently
-        Promise.all([updateNavAndButtons(), loadEvents()]);
-    });
+        // Run all async functions concurrently
+        Promise.all([updateNavAndButtons(), loadEvents(), checkChatbotStatus()]);
 
-    // --- Theme Switcher Logic ---
-    const themeToggle = document.getElementById('theme-toggle');
-    const currentTheme = localStorage.getItem('theme');
-
-    if (currentTheme) {
-        document.body.setAttribute('data-theme', currentTheme);
-        if (currentTheme === 'dark') {
-            themeToggle.checked = true;
-        }
-    }
-
-    themeToggle.addEventListener('change', function() {
-        if (this.checked) {
-            document.body.setAttribute('data-theme', 'dark');
-            localStorage.setItem('theme', 'dark');
-        } else {
-            document.body.setAttribute('data-theme', 'light');
-            localStorage.setItem('theme', 'light');
-        }
+        // Add scroll listener for header shadow
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 20) {
+                document.body.classList.add('scrolled');
+            } else {
+                document.body.classList.remove('scrolled');
+            }
+        });
     });
 
     // --- Chatbot Logic ---
@@ -242,6 +303,7 @@
     const chatBody = document.getElementById('chat-body');
 
     chatToggle.addEventListener('click', () => {
+        if (chatToggle.disabled) return;
         chatWindow.style.display = chatWindow.style.display === 'flex' ? 'none' : 'flex';
     });
 

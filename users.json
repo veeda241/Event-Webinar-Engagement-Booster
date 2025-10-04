@@ -1,0 +1,37 @@
+[
+    {
+        "id": 1,
+        "email": "vyas@example.com",
+        "name": "vyas",
+        "hashed_password": "$5$rounds=535000$ApkmRL28zdzqxWhm$t9ObqPgu/VY2jLde6fi3FUX3.7OJsEj0iOEgZfdN.R6",
+        "job_title": "Developer",
+        "is_admin": true,
+        "interests": "AI, Python",
+        "preferred_contact_method": "email",
+        "phone_number": null,
+        "profile_image_url": "/uploads/images/1ac628fb-b1e5-4af0-ba25-18e0ad69728c.jpg"
+    },
+    {
+        "id": 2,
+        "email": "vyas.sk17@gmail.com",
+        "name": "vyas",
+        "hashed_password": "$5$rounds=535000$bZn7OiVOQhpRsAZW$75a4XnEM/m0yKtIn8mb3bE1sfTdCrY9/0MHe604rAN7",
+        "job_title": "STUDENT",
+        "is_admin": false,
+        "interests": "python ai ",
+        "preferred_contact_method": "whatsapp",
+        "phone_number": "9445290039"
+    },
+    {
+        "id": 3,
+        "email": "nmblog6699@gmail.com",
+        "name": "vyas",
+        "hashed_password": "$5$rounds=535000$eSNZJgj8LJjjaEA.$Bjt2sB6cvM.x96jjkmW/Z2ij7FtrD7fjo1tzL2Ildi1",
+        "job_title": "Developer",
+        "is_admin": false,
+        "interests": "python ai ",
+        "preferred_contact_method": "email",
+        "phone_number": null,
+        "profile_image_url": null
+    }
+]

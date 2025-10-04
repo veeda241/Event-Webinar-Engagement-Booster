@@ -3,17 +3,13 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Create New Event</title>
+    <title>EngageSphere / Create New Event</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✧</text></svg>">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-<div class="theme-switch-wrapper">
-    <label class="theme-switch" for="theme-toggle">
-        <input type="checkbox" id="theme-toggle" />
-        <span class="slider"></span>
-    </label>
-</div>
+
 
 <div class="container">
     <header class="app-header">
@@ -31,6 +27,10 @@
             <input type="text" id="event-name" placeholder="Event Name" required>
             <textarea id="event-description" placeholder="Event Description" required></textarea>
             <input type="datetime-local" id="event-time" required>
+            <div class="form-group">
+                <label for="event-image">Event Image (Optional)</label>
+                <input type="file" id="event-image" accept="image/*">
+            </div>
             <button type="submit" class="btn btn-primary">Create Event</button>
         </form>
     </div>
@@ -43,10 +43,20 @@
     const eventForm = document.getElementById('event-form');
     const statusDiv = document.getElementById('status');
 
-    // Protect this page: redirect if not logged in
-    const token = localStorage.getItem('accessToken');
-    if (!token) {
-        window.location.href = '/login.html';
+    async function fetchWithAuth(url, options = {}) {
+        const token = localStorage.getItem('accessToken');
+        if (!token) {
+            window.location.href = '/login.html';
+            return new Promise(() => {}); 
+        }
+        const headers = { ...options.headers, 'Authorization': `Bearer ${token}` };
+        const response = await fetch(url, { ...options, headers });
+        if (response.status === 401) {
+            localStorage.removeItem('accessToken');
+            window.location.href = '/login.html';
+            return new Promise(() => {});
+        }
+        return response;
     }
 
     // We will rely on the backend to enforce admin-only creation.
@@ -62,47 +72,73 @@
 
     eventForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const eventName = document.getElementById('event-name').value;
-        const eventDescription = document.getElementById('event-description').value;
-        const eventTimeValue = document.getElementById('event-time').value;
-
-        if (!eventTimeValue) {
-            showStatus('Please select a valid date and time for the event.', true);
-            return;
-        }
-        const eventTime = new Date(eventTimeValue).toISOString();
+        showStatus('Processing...', false);
 
         try {
-            const response = await fetch(`${API_BASE_URL}/events/`, {
+            let imageUrl = null;
+            const imageFile = document.getElementById('event-image').files[0];
+
+            // Step 1: Upload image if it exists
+            if (imageFile) {
+                showStatus('Uploading image...', false);
+                const formData = new FormData();
+                formData.append('file', imageFile);
+
+                const uploadResponse = await fetchWithAuth(`${API_BASE_URL}/upload-image/`, {
+                    method: 'POST',
+                    body: formData,
+                    // Note: Don't set Content-Type header for FormData, browser does it with boundary
+                });
+
+                if (!uploadResponse.ok) {
+                    throw new Error('Image upload failed.');
+                }
+                const uploadResult = await uploadResponse.json();
+                imageUrl = uploadResult.image_url;
+            }
+
+            // Step 2: Create the event with the image URL
+            showStatus('Creating event...', false);
+            const eventName = document.getElementById('event-name').value;
+            const eventDescription = document.getElementById('event-description').value;
+            const eventTimeValue = document.getElementById('event-time').value;
+
+            if (!eventTimeValue) {
+                throw new Error('Please select a valid date and time for the event.');
+            }
+            const eventTime = new Date(eventTimeValue).toISOString();
+
+            const eventPayload = {
+                name: eventName,
+                description: eventDescription,
+                event_time: eventTime,
+                image_url: imageUrl
+            };
+
+            const eventResponse = await fetchWithAuth(`${API_BASE_URL}/events/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({
-                    name: eventName,
-                    description: eventDescription,
-                    event_time: eventTime
-                })
+                body: JSON.stringify(eventPayload)
             });
 
-            if (response.status === 403) {
+            if (eventResponse.status === 403) {
                 throw new Error('You do not have permission to create events.');
             }
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.detail || `HTTP error! Status: ${response.status}`);
+            if (!eventResponse.ok) {
+                const errorData = await eventResponse.json();
+                throw new Error(errorData.detail || `HTTP error! Status: ${eventResponse.status}`);
             }
-            const result = await response.json();
+            const result = await eventResponse.json();
             showStatus(`Event "${result.name}" created successfully! Redirecting...`);
             
-            // Redirect to home page after a short delay
             setTimeout(() => {
                 window.location.href = '/';
             }, 2000);
 
         } catch (error) {
-            showStatus(`Error creating event: ${error.message}`, true);
+            showStatus(`Error: ${error.message}`, true);
         }
     });
 </script>

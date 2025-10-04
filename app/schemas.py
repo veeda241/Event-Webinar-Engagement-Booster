@@ -10,11 +10,13 @@ class UserBase(BaseModel):
     phone_number: Optional[str] = None
     preferred_contact_method: Optional[str] = 'email'
     interests: Optional[str] = None
+    profile_image_url: Optional[str] = None
 
 class EventBase(BaseModel):
     name: str
     description: str
     event_time: Optional[datetime] = None
+    image_url: Optional[str] = None
 
 # Schema for user output (never expose password)
 class User(UserBase):
@@ -68,3 +70,33 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     email: Optional[str] = None
+
+class DetailedRegistrationBase(BaseModel):
+    full_name: str
+    email: EmailStr
+    phone_number: Optional[str] = None
+    payment_info: Optional[str] = None
+    consent_agreed: bool
+    team_details: Optional[str] = None
+
+class DetailedRegistrationCreate(DetailedRegistrationBase):
+    event_id: int
+
+class DetailedRegistration(DetailedRegistrationBase):
+    id: int
+    user_id: int
+    event_id: int
+    registration_time: datetime
+
+    class Config:
+        from_attributes = True
+
+class UserUpdate(BaseModel):
+    name: str
+    job_title: Optional[str] = None
+    interests: Optional[str] = None
+    profile_image_url: Optional[str] = None
+
+class ContactUpdate(BaseModel):
+    preferred_contact_method: str
+    phone_number: Optional[str] = None
