@@ -22,12 +22,9 @@ async def _send_email_sendgrid(to_email: str, subject: str, body: str):
         to_emails=to_email,
         subject=subject,
         html_content=body.replace('\n', '<br>')) # Simple conversion to HTML
-    try:
-        sg = SendGridAPIClient(SENDGRID_API_KEY)
-        response = await run_in_threadpool(sg.send, message)
-        print(f"✅ Email sent to {to_email} via SendGrid. Status: {response.status_code}")
-    except Exception as e:
-        print(f"❌ Error sending email via SendGrid: {e}")
+    sg = SendGridAPIClient(SENDGRID_API_KEY)
+    response = await run_in_threadpool(sg.send, message)
+    print(f"✅ Email sent to {to_email} via SendGrid. Status: {response.status_code}")
 
 async def _send_whatsapp_twilio(to_phone: str, body: str):
     """Sends a WhatsApp message using the Twilio API."""
@@ -36,17 +33,14 @@ async def _send_whatsapp_twilio(to_phone: str, body: str):
         print(f"✅ [SIMULATED] WhatsApp to {to_phone} | Body: {body.splitlines()[0]}")
         return
 
-    try:
-        # Twilio requires the 'whatsapp:' prefix for the recipient number
-        to_whatsapp_number = f'whatsapp:{to_phone}'
-        message = await run_in_threadpool(twilio_client.messages.create,
-            from_=settings.TWILIO_WHATSAPP_FROM,
-            body=body,
-            to=to_whatsapp_number
-        )
-        print(f"✅ WhatsApp message sent to {to_phone} (SID: {message.sid})")
-    except Exception as e:
-        print(f"❌ Error sending WhatsApp message via Twilio: {e}")
+    # Twilio requires the 'whatsapp:' prefix for the recipient number
+    to_whatsapp_number = f'whatsapp:{to_phone}'
+    message = await run_in_threadpool(twilio_client.messages.create,
+        from_=settings.TWILIO_WHATSAPP_FROM,
+        body=body,
+        to=to_whatsapp_number
+    )
+    print(f"✅ WhatsApp message sent to {to_phone} (SID: {message.sid})")
 
 async def send_message(user_id: int, content: str):
     """
@@ -72,6 +66,7 @@ async def send_message(user_id: int, content: str):
             await _send_email_sendgrid(user.email, subject, body)
 
     except Exception as e:
-        print(f"❌ Error sending email to user {user_id}: {e}")
+        print(f"[ERROR] Error sending message to user {user_id}: {e}")
+        raise
     finally:
         db.close()

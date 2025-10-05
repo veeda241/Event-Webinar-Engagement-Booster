@@ -41,7 +41,8 @@ async def process_registration(db: Session, user: models.User, event_id: int, ll
         registration_time=datetime.utcnow()
     )
     db.add(db_registration)
-    db.commit()
+    db.flush() # Use flush to send the registration to the DB and get an ID without ending the transaction.
+    db.refresh(db_registration)
     db.refresh(user) # Refresh user to get the updated interests
 
     # 3. Send instant welcome message
