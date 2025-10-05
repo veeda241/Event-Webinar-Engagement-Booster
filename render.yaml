@@ -1,0 +1,39 @@
+services:
+  # A Web Service for the FastAPI backend
+  - type: web
+    name: engagesphere-backend
+    env: python
+    plan: free  # You can choose a paid plan for more resources
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.12
+      - key: DATABASE_URL
+        fromDatabase:
+          name: engagesphere-db
+          property: connectionString
+      # Add other environment variables from your .env file here
+      # Example:
+      # - key: SECRET_KEY
+      #   value: your_secret_key_here
+
+  # A Static Site for the frontend
+  - type: web
+    name: engagesphere-frontend
+    plan: free
+    staticPublishPath: ./public
+    routes:
+      - type: rewrite
+        source: /api/(.*)
+        destination: https://engagesphere-backend.onrender.com/api/$1
+      - type: rewrite # Handle root path
+        source: /
+        destination: /index.html
+
+# A PostgreSQL database
+databases:
+  - name: engagesphere-db
+    databaseName: engagesphere
+    user: engagesphere_user
+    plan: free
