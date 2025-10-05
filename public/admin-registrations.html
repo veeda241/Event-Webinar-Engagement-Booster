@@ -6,6 +6,37 @@
     <title>EngageSphere / Event Registrations</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✧</text></svg>">
     <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .analytics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+            margin-bottom: 3rem;
+        }
+        .stat-card, .chart-container {
+            background: var(--surface-glass);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 8px 32px var(--shadow-color);
+        }
+        .stat-card h3 {
+            font-size: 1.2rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+        .stat-card p {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--accent-color);
+        }
+        .chart-container {
+            height: 400px;
+        }
+    </style>
 </head>
 <body>
 
@@ -20,13 +51,17 @@
     <a href="/" class="back-link">&larr; Back to Events</a>
     <h1 id="event-title">Event Registrations</h1>
 
+    <div id="analytics-dashboard">
+        <!-- Analytics will be loaded here -->
+    </div>
+
     <div id="registrations-table-container">
-        <!-- Registrations will be loaded here by JavaScript -->
+        <!-- Registrations table will be loaded here -->
     </div>
 </div>
 
 <script>
-    const API_BASE_URL = "http://127.0.0.1:8001";
+    const API_BASE_URL = "";
     const urlParams = new URLSearchParams(window.location.search);
     const eventId = urlParams.get('event_id');
 
@@ -50,69 +85,170 @@
         document.querySelector('.container').innerHTML = '<h1>Error: Event ID is missing.</h1><a href="/" class="back-link">&larr; Go back</a>';
     }
 
-    async function loadRegistrations() {
+    function renderAnalytics(registrations) {
+        const dashboard = document.getElementById('analytics-dashboard');
+        if (registrations.length === 0) {
+            dashboard.innerHTML = '';
+            return;
+        }
+
+        // --- 1. Data Processing ---
+        const totalRegs = registrations.length;
+        
+        const contactMethodCounts = registrations.reduce((acc, reg) => {
+            const method = reg.preferred_contact_method || 'email';
+            acc[method] = (acc[method] || 0) + 1;
+            return acc;
+        }, {});
+
+        const jobTitleCounts = registrations.reduce((acc, reg) => {
+            const title = reg.job_title ? reg.job_title.trim().toLowerCase() : 'not specified';
+            acc[title] = (acc[title] || 0) + 1;
+            return acc;
+        }, {});
+
+        const registrationDates = registrations.reduce((acc, reg) => {
+            const date = new Date(reg.registration_time).toISOString().split('T')[0];
+            acc[date] = (acc[date] || 0) + 1;
+            return acc;
+        }, {});
+        const sortedDates = Object.keys(registrationDates).sort();
+        const trendLabels = sortedDates;
+        const trendData = sortedDates.map(date => registrationDates[date]);
+
+        // --- 2. HTML Structure ---
+        dashboard.innerHTML = `
+            <div class="analytics-grid">
+                <div class="stat-card">
+                    <h3>Total Registrations</h3>
+                    <p>${totalRegs}</p>
+                </div>
+                <div class="chart-container">
+                    <canvas id="regTrendChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <canvas id="jobTitleChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <canvas id="contactMethodChart"></canvas>
+                </div>
+            </div>
+        `;
+
+        // --- 3. Chart Rendering ---
+        const chartOptions = {
+            maintainAspectRatio: false,
+            plugins: { legend: { labels: { color: getComputedStyle(document.body).getPropertyValue('--text-color') } } },
+            scales: { 
+                y: { ticks: { color: getComputedStyle(document.body).getPropertyValue('--text-muted') }, grid: { color: getComputedStyle(document.body).getPropertyValue('--border-color') } },
+                x: { ticks: { color: getComputedStyle(document.body).getPropertyValue('--text-muted') }, grid: { color: 'transparent' } }
+            }
+        };
+
+        new Chart(document.getElementById('regTrendChart'), {
+            type: 'line',
+            data: {
+                labels: trendLabels,
+                datasets: [{
+                    label: 'Registrations per Day',
+                    data: trendData,
+                    borderColor: 'rgba(0, 123, 255, 1)',
+                    backgroundColor: 'rgba(0, 123, 255, 0.2)',
+                    fill: true,
+                    tension: 0.3
+                }]
+            },
+            options: { ...chartOptions, plugins: { ...chartOptions.plugins, title: { display: true, text: 'Registration Trend', color: getComputedStyle(document.body).getPropertyValue('--text-color'), font: { size: 16 } } } }
+        });
+
+        new Chart(document.getElementById('jobTitleChart'), {
+            type: 'bar',
+            data: {
+                labels: Object.keys(jobTitleCounts),
+                datasets: [{
+                    label: 'Job Titles',
+                    data: Object.values(jobTitleCounts),
+                    backgroundColor: 'rgba(255, 153, 0, 0.7)'
+                }]
+            },
+            options: { ...chartOptions, indexAxis: 'y', plugins: { ...chartOptions.plugins, title: { display: true, text: 'Attendee Job Titles', color: getComputedStyle(document.body).getPropertyValue('--text-color'), font: { size: 16 } } } }
+        });
+
+        new Chart(document.getElementById('contactMethodChart'), {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(contactMethodCounts),
+                datasets: [{
+                    data: Object.values(contactMethodCounts),
+                    backgroundColor: ['rgba(56, 161, 105, 0.7)', 'rgba(229, 62, 62, 0.7)', 'rgba(255, 153, 0, 0.7)']
+                }]
+            },
+            options: { ...chartOptions, plugins: { ...chartOptions.plugins, title: { display: true, text: 'Preferred Contact Method', color: getComputedStyle(document.body).getPropertyValue('--text-color'), font: { size: 16 } } } }
+        });
+    }
+
+    function renderTable(registrations) {
+        const container = document.getElementById('registrations-table-container');
+        if (registrations.length === 0) {
+            container.innerHTML = '<p>No registrations found for this event.</p>';
+            return;
+        }
+        const table = document.createElement('table');
+        table.innerHTML = `
+            <thead>
+                <tr>
+                    <th>Full Name</th>
+                    <th>Email</th>
+                    <th>Job Title</th>
+                    <th>Interests</th>
+                    <th>Registered On</th>
+                </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        `;
+        const tbody = table.querySelector('tbody');
+        registrations.forEach(reg => {
+            const row = tbody.insertRow();
+            row.innerHTML = `
+                <td>${reg.full_name}</td>
+                <td>${reg.email}</td>
+                <td>${reg.job_title || 'N/A'}</td>
+                <td>${reg.interests || 'N/A'}</td>
+                <td>${new Date(reg.registration_time).toLocaleString()}</td>
+            `;
+        });
+        container.innerHTML = '<h2>All Registrations</h2>';
+        container.appendChild(table);
+    }
+
+    async function loadPageData() {
         try {
-            // Fetch event details (public, no auth needed)
-            const eventResponse = await fetch(`${API_BASE_URL}/events/${eventId}`);
+            const [eventResponse, registrationsResponse] = await Promise.all([
+                fetch(`${API_BASE_URL}/events/${eventId}`),
+                fetchWithAuth(`${API_BASE_URL}/registrations/${eventId}`)
+            ]);
+
             if (!eventResponse.ok) throw new Error('Event not found');
             const event = await eventResponse.json();
-            document.getElementById('event-title').textContent = `Registrations for ${event.name}`;
+            document.getElementById('event-title').textContent = `Analytics for ${event.name}`;
 
-            // Fetch registrations (private, auth needed)
-            const response = await fetchWithAuth(`${API_BASE_URL}/registrations/${eventId}`);
-
-            if (response.status === 403) {
-                throw new Error('You do not have permission to view these registrations.');
-            }
-            if (!response.ok) {
-                throw new Error('Could not load registrations.');
-            }
-
-            const registrations = await response.json();
-            const container = document.getElementById('registrations-table-container');
-
-            if (registrations.length === 0) {
-                container.innerHTML = '<p>No registrations found for this event.</p>';
-                return;
-            }
-
-            const table = document.createElement('table');
-            table.innerHTML = `
-                <thead>
-                    <tr>
-                        <th>Full Name</th>
-                        <th>Email</th>
-                        <th>Phone Number</th>
-                        <th>Team Details</th>
-                        <th>Registered On</th>
-                    </tr>
-                </thead>
-                <tbody>
-                </tbody>
-            `;
-            const tbody = table.querySelector('tbody');
-            registrations.forEach(reg => {
-                const row = tbody.insertRow();
-                row.innerHTML = `
-                    <td>${reg.full_name}</td>
-                    <td>${reg.email}</td>
-                    <td>${reg.phone_number || 'N/A'}</td>
-                    <td>${reg.team_details || 'N/A'}</td>
-                    <td>${new Date(reg.registration_time).toLocaleString()}</td>
-                `;
-            });
-            container.innerHTML = '';
-            container.appendChild(table);
+            if (registrationsResponse.status === 403) throw new Error('You do not have permission to view these registrations.');
+            if (!registrationsResponse.ok) throw new Error('Could not load registrations.');
+            
+            const registrations = await registrationsResponse.json();
+            
+            renderAnalytics(registrations);
+            renderTable(registrations);
 
         } catch (error) {
-            const container = document.getElementById('registrations-table-container');
-            container.innerHTML = `<p class="error">${error.message}</p>`;
+            document.getElementById('analytics-dashboard').innerHTML = `<p class="error">${error.message}</p>`;
         }
     }
 
     document.addEventListener('DOMContentLoaded', () => {
         if (eventId) {
-            loadRegistrations();
+            loadPageData();
         }
     });
 </script>

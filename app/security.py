@@ -25,10 +25,14 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 def verify_password(plain_password, hashed_password):
+    # Ensure password is truncated to 72 bytes before verification,
+    # matching the logic in get_password_hash.
+    if len(plain_password.encode('utf-8')) > 72:
+        plain_password = plain_password[:72]
     return pwd_context.verify(plain_password, hashed_password)
 
 def get_password_hash(password):
-    # bcrypt has a 72-byte limit. We check the byte length here.
+    # To maintain compatibility with systems that might use bcrypt (which has a 72-byte limit), we truncate passwords.
     if len(password.encode('utf-8')) > 72:
         # Truncate the original string password and pass it to the hasher.
         # Passlib will handle the final encoding.

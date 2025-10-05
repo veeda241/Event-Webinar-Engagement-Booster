@@ -91,6 +91,18 @@ class DetailedRegistration(DetailedRegistrationBase):
     class Config:
         from_attributes = True
 
+class RegistrationAnalysisDetail(DetailedRegistrationBase):
+    id: int
+    user_id: int
+    event_id: int
+    registration_time: datetime
+    job_title: Optional[str] = None
+    interests: Optional[str] = None
+    preferred_contact_method: Optional[str] = 'email'
+
+    class Config:
+        from_attributes = True
+
 class UserUpdate(BaseModel):
     name: str
     job_title: Optional[str] = None

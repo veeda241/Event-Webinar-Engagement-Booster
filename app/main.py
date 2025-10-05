@@ -444,18 +444,40 @@ async def create_detailed_registration(
         db.rollback()
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
 
-@app.get("/registrations/{event_id}", response_model=List[schemas.DetailedRegistration])
+from sqlalchemy.orm import joinedload
+
+@app.get("/registrations/{event_id}", response_model=List[schemas.RegistrationAnalysisDetail])
 def read_detailed_registrations(
     event_id: int,
     db: Session = Depends(database.get_db),
     current_user: schemas.User = Depends(security.get_current_admin_user)
 ):
     """
-    Retrieve all detailed registrations for a specific event.
+    Retrieve all detailed registrations for a specific event, including related user data for analysis.
     (Admin only)
     """
-    registrations = db.query(models.DetailedRegistration).filter(models.DetailedRegistration.event_id == event_id).all()
-    return registrations
+    registrations = db.query(models.DetailedRegistration).options(joinedload(models.DetailedRegistration.user)).filter(models.DetailedRegistration.event_id == event_id).all()
+    
+    results = []
+    for reg in registrations:
+        if reg.user:
+            analysis_data = schemas.RegistrationAnalysisDetail(
+                id=reg.id,
+                event_id=reg.event_id,
+                user_id=reg.user_id,
+                full_name=reg.full_name,
+                email=reg.email,
+                phone_number=reg.phone_number,
+                payment_info=reg.payment_info,
+                consent_agreed=reg.consent_agreed,
+                team_details=reg.team_details,
+                registration_time=reg.registration_time,
+                job_title=reg.user.job_title,
+                interests=reg.user.interests,
+                preferred_contact_method=reg.user.preferred_contact_method
+            )
+            results.append(analysis_data)
+    return results
 
 # Mount the 'public' directory to serve the static frontend.
 # This must be placed AFTER all the API routes.
