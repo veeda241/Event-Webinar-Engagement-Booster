@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
     # --- LLM Configuration ---
-    ENABLE_LOCAL_LLM: bool = True
+    ENABLE_LOCAL_LLM: bool = False
     LLM_MODEL_NAME: str = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
 
     # --- Messaging Services ---

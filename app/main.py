@@ -20,8 +20,6 @@ UPLOAD_DIR = "public/uploads/images"
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # On startup
-    print("--- Dropping all database tables... ---")
-    models.Base.metadata.drop_all(bind=database.engine)
     print("--- Creating database tables (if they don't exist)...")
     models.Base.metadata.create_all(bind=database.engine)
     print("--- Database tables checked/created.")
