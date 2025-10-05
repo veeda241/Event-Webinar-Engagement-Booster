@@ -1,7 +1,6 @@
 services:
-  # A Web Service for the FastAPI backend
   - type: web
-    name: engagesphere-backend
+    name: engagesphere
     runtime: python
     plan: free
     buildCommand: "pip install -r requirements.txt"
@@ -13,19 +12,6 @@ services:
         fromDatabase:
           name: engagesphere-db
           property: connectionString
-
-  # A Static Site for the frontend
-  - type: static
-    name: engagesphere-frontend
-    plan: free
-    staticPublishPath: ./public
-    routes:
-      - type: rewrite
-        source: /api/(.*)
-        destination: https://engagesphere-backend.onrender.com/api/$1
-      - type: rewrite
-        source: /*
-        destination: /index.html
 
 databases:
   - name: engagesphere-db
